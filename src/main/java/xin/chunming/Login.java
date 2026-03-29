@@ -48,21 +48,6 @@ public class Login {
         return new OkHttpClient.Builder()
                 .sslSocketFactory(sc.getSocketFactory(), (X509TrustManager) trustAllCerts[0])
                 .hostnameVerifier((hostname, session) -> true)
-                .cookieJar(new CookieJar() {          // ← 新增这部分
-                    private final List<Cookie> cookieStore = new ArrayList<>();
-
-                    @Override
-                    public void saveFromResponse(HttpUrl url, List<Cookie> cookies) {
-                        cookieStore.clear();           // 简单实现：只保留最新的
-                        cookieStore.addAll(cookies);
-
-                    }
-
-                    @Override
-                    public List<Cookie> loadForRequest(HttpUrl url) {
-                        return cookieStore;
-                    }
-                })
                 .build();
 
     }
@@ -134,7 +119,7 @@ public class Login {
                 if (code.equals("1")) {
                     System.out.println("错误: getToken" + message);
                     logger.info("错误: getToken" + message);
-                    if (message.contains("设备不在开放时间")||message.contains("即将闭馆")||message.contains("您预约的不是当前设备")){
+                    if (message.contains("设备不在开放时间")||message.contains("即将闭馆")||message.contains("您预约的不是当前设备")||(message.contains("请去")&&message.contains("处扫描二维码"))){
                         return LIBRARY_OR_USER_UNAVAILABLE;
                     }
                     else return SEAT_ERROR;
@@ -184,17 +169,7 @@ public class Login {
 
     }
 
-    /*
-    *{"code":0,"message":"登录成功","data":{"reserveInfo":
-    * {"uuid":"97cdafa04d294e038220c4034f37b81c","resvId":20542786,"appAccNo":100186066,"memberKind":1,"resvDate":20260328,"resvBeginTime":1774660320000,"resvEndTime":1774678320000,"resvEndRealTime":null,"resvCheckTime":1774660263586,"resvDelTime":null,"resvStatus":1093,"classKind":8,"resvProperty":3,"appUrl":null,"testName":null,"resvKind":2,"memo":null,"resvRuleId":1,"openRuleId":1754553,"statFlag":1,"feeRuleId":null,"dayOfWeek":5,"realUsers":null,"signTime":null,"addValueNum":0,"gmtCreate":1774660263586,"gmtModified":1774660263586,"devName":null,"leftTime":null,"checkInfo":null,"logonName":"23198050","resvName":"付春铭","resvDevInfoList":[{"resvId":20542786,"devId":3523761,"devName":"3F-B040","devSn":3523761,"kindId":1874705,"parentId":0,"devStatus":0,"devProp":2,"kindName":"考研专座","classKind":8,"roomId":1841586,"roomSn":"13","roomName":"三楼图书东南区","labId":1753990,"labName":"三楼阅览区","roomKind":8,"memo":null,"borrowDevStatus":null,"campusId":1}],"resvMemberInfoList":[{"uuid":"af26c0009d7a46bcad63e908fbc91acd","resvId":20542786,"accNo":100186066,"logonName":"23198050","trueName":"付春铭","ident":256,"handPhone":"","status":1,"kind":9,"memo":null,"signTime":1774660264000,"cardNo":"","cardId":0}],"endEarly":false,"addServices":null,"tempLeaveEndTime":null,"activityNo":null,"resvEndOperationTime":null,"endNormal":false,"latestCheckInTime":null,"latestJoinTime":null,"operateName":null,"operateLogonName":null},"duration":"8分41秒","openState":true,"roomProp":0,"status":1,"token":"eb94551ddb034c36bac3348eb02db2c5"},"count":0,"vals":null}
 
-    * *{"code":0,"message":"登录成功","data":{"reserveInfo":
-    * null,"openState":true,"roomProp":0,"devInfo":[{"devId":3523822,"devSn":3523822,"devAssetSn":null,"devName":"3F-B099","kindId":1874705,"devStatus":0,"ctrlMode":null,"useGroupId":null,"parentId":0,"roomId":1841588,"devUrl":null,"devInfo":"","mac":null,"maxUser":1,"minUser":1,"ip":null,"isDel":0,"pcName":"","devProp":2,"kindName":"考研专座","kindClass":8,"kindProp":0,"roomSn":"14","roomName":"三楼图书南区","roomProp":0,"roomStatus":null,"manMode":0,"limitMode":null,"maip":null,"openRulesn":1754553,"labId":1753990,"labSn":"1753989","labName":"三楼阅览区","labKind":8,"labProp":1,"deptId":676896,"openState":1,"campusId":1,"roomKind":8,"cardFreeGroupId":null,"maintenanceTime":null,"coordinate":"53.379152,32.993890","tagId":null,"icon":null,"orderNum":0}],"status":null,"token":"5b4ef597616944ff929fda55ed5f85f4"},"count":0,"vals":null}
-    * Sec-Fetch-Site	same-origin
-    Accept-Language	zh-TW,zh-Hant;q=0.9
-    Accept-Encoding	gzip, deflate, br
-    Sec-Fetch-Mode	cors
-    */
     public static int reservationCheck(Bean bean, String seatid, boolean renew, String cookie, String jobid, String oldtime) throws IOException {
         Request request = new Request.Builder()
                 .url("https://ic.synu.edu.cn/ic-web/phoneSeatReserve/duration")
