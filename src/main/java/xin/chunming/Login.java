@@ -224,7 +224,7 @@ public class Login {
                 if (code.equals("1")) {
                     System.out.println("错误: /phoneSeatReserve/duration " + message);
                     logger.info("错误: /phoneSeatReserve/duration " + message);
-                    if (message.contains("设备不在开放时间")||message.contains("即将闭馆")||message.contains("您预约的不是当前设备")){
+                    if (message.contains("设备不在开放时间")||message.contains("即将闭馆")||message.contains("您预约的不是当前设备")||(message.contains("请去")&&message.contains("处扫描二维码"))){
                         return LIBRARY_OR_USER_UNAVAILABLE;
                     }
 
