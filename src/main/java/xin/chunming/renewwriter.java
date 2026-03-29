@@ -48,7 +48,6 @@ public class renewwriter {
             }
         }
 
-// 推荐方式：
         System.out.println("尝试创建续期配置");
         logger.info("尝试创建续期配置");
         ProcessBuilder processBuilder = new ProcessBuilder("at", "now", "+" + String.valueOf(Integer.parseInt(miniute) + 3), "minutes");
