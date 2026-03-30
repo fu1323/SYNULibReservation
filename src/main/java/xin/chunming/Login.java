@@ -77,7 +77,7 @@ public class Login {
     public static final int LIBRARY_OR_USER_UNAVAILABLE = 2;
     public static final int SEAT_OK = 0;
 
-    public static int getToken(Bean bean, String seatid, boolean renew, String oldtime, String jobid) throws IOException {
+    public static int getToken(Bean bean, String seatid, String oldtime, String jobid) throws IOException {
 // 1. 使用 HttpUrl.Builder 自动处理参数编码
         Request request = new Request.Builder()
                 .url("https://ic.synu.edu.cn/ic-web/phoneSeatReserve/login")
@@ -149,7 +149,7 @@ public class Login {
 
                         System.out.println("尝试座位: " + jsonNode.get("data").get("devInfo").get(0).get("devName").asText());
                         logger.info("尝试座位: " + jsonNode.get("data").get("devInfo").get(0).get("devName").asText());
-                        return reservationCheck(bean, seatid, renew, iccookie[0], jobid, oldtime);
+                        return reservationCheck(bean, seatid, iccookie[0], jobid, oldtime);
                     }
 
 
@@ -170,7 +170,7 @@ public class Login {
     }
 
 
-    public static int reservationCheck(Bean bean, String seatid, boolean renew, String cookie, String jobid, String oldtime) throws IOException {
+    public static int reservationCheck(Bean bean, String seatid, String cookie, String jobid, String oldtime) throws IOException {
         Request request = new Request.Builder()
                 .url("https://ic.synu.edu.cn/ic-web/phoneSeatReserve/duration")
                 .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36")
@@ -211,7 +211,7 @@ public class Login {
                     if (Integer.parseInt(maxMiniute) < 300) {
                         if (LocalDateTime.now().getHour() > 15) {//15点之后 maxMinute<300正常
                             bean.setMiniute(Integer.parseInt(maxMiniute));
-                            return booking(Integer.parseInt(maxMiniute), bean, seatid, renew, cookie, jobid, oldtime);
+                            return booking(Integer.parseInt(maxMiniute), bean, seatid, cookie, jobid, oldtime);
 
                         } else {
                             System.out.println("座位异常! 更换中 " + s);
@@ -220,7 +220,7 @@ public class Login {
                         }
                     } else {
                         bean.setMiniute(300);
-                        return booking(300, bean, seatid, renew, cookie, jobid, oldtime);
+                        return booking(300, bean, seatid, cookie, jobid, oldtime);
                     }
 
                 } else {
@@ -236,7 +236,7 @@ public class Login {
         }
     }
 
-    public static int booking(int times, Bean bean, String seatid, boolean renew, String cookie, String jobid, String oldtime) throws IOException {
+    public static int booking(int times, Bean bean, String seatid, String cookie, String jobid, String oldtime) throws IOException {
         Request request = new Request.Builder()
                 .url("https://ic.synu.edu.cn/ic-web/phoneSeatReserve/reserve")
                 .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36")
@@ -275,7 +275,7 @@ public class Login {
                     if (msg.contains("操作成功")) {
                         System.out.println("订座/续订 操作成功!");
                         logger.info("订座/续订 操作成功!");
-                        if (renew && LocalDateTime.now().getHour() < 16 ) {//本次续期/订座 只有小于下午3点 才可配置自动续期
+                        if (bean.isRenew() && LocalDateTime.now().getHour() < 16 ) {//本次续期/订座 只有小于下午3点 才可配置自动续期
                             renewwriter.configWriter(path, String.valueOf(times), seatid, jarPath, jobid, oldtime);
                         }
                         return SEAT_OK;

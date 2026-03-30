@@ -5,8 +5,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -14,36 +12,43 @@ public class renewwriter {
 
     private static final Logger logger = LoggerFactory.getLogger(renewwriter.class);
 
-    public static void configWriter(String path, String miniute, String seatid, String jarpath, String oldjobid, String oldtime) throws IOException, InterruptedException {
+    public static void configWriter(String renewjsonpath, String miniute, String seatid, String jarpath, String oldjobid, String oldtime) throws IOException, InterruptedException {
         LocalDateTime now = LocalDateTime.now();
-        System.out.println(miniute);
         String jobid = null;
-        LocalDateTime localDateTime = now.plusMinutes(Integer.parseInt(miniute));
+        if (!(oldjobid == null || oldjobid.equals(""))) {
 
-        ProcessBuilder processatq = new ProcessBuilder("atq");
-        processatq.redirectErrorStream(true); // 合并错误流到标准输出
-        ;
-        Process processa = processatq.start();
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(processa.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
 
-                String[] parts = line.trim().split("\\s+");
-                if (parts.length > 0 && parts[0].equals(oldjobid)) {
-                    ProcessBuilder processBuilder = new ProcessBuilder("atrm", oldjobid);
-                    processBuilder.redirectErrorStream(true);
-                    Process process = processBuilder.start();
-                    process.waitFor();
-                    String l;
+            System.out.println(miniute);
+            System.out.println("oldjobid: " + oldjobid);
+
+            LocalDateTime localDateTime = now.plusMinutes(Integer.parseInt(miniute));
+
+            ProcessBuilder processatq = new ProcessBuilder("atq");
+            processatq.redirectErrorStream(true); // 合并错误流到标准输
+            Process processa = processatq.start();
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(processa.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+
+                    String[] parts = line.trim().split("\\s+");
+                    if (parts.length > 0 && parts[0].equals(oldjobid)) {
+                        logger.info("移除oldjob: " + oldjobid);
+                        System.out.println("移除oldjob: " + oldjobid);
+                        ProcessBuilder processBuilder = new ProcessBuilder("atrm", oldjobid);
+                        processBuilder.redirectErrorStream(true);
+                        Process process = processBuilder.start();
+                        process.waitFor();
+                        String l;
 //                   OutputStream outputStream = process.getOutputStream();
-                    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                    while ((l = bufferedReader.readLine()) != null) {
-                        System.out.println(l);
-                        logger.info(l);
-                    }
-                    process.destroy();
+                        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                        while ((l = bufferedReader.readLine()) != null) {
+                            System.out.println(l);
+                            logger.info(l);
+                        }
+                        process.destroy();
 
+                    }
                 }
             }
         }
@@ -86,7 +91,7 @@ public class renewwriter {
         }
 
         int exitCode = p.waitFor();
-        BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(path + File.separator + "renew.json")));
+        BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(renewjsonpath + File.separator + "renew.json")));
 
         bufferedWriter.write("{\n" +
                 "  \"datetime\": \"" + nexttime + "\",\n" +

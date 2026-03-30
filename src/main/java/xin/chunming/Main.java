@@ -6,18 +6,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.net.URISyntaxException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Date;
-import java.util.Map;
 
 //TIP 要<b>运行</b>代码，请按 <shortcut actionId="Run"/> 或
 // 点击装订区域中的 <icon src="AllIcons.Actions.Execute"/> 图标。
 public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
+    private static String oldjobid;
 
     public static void main(String[] args) throws URISyntaxException, IOException {
 
@@ -81,7 +77,9 @@ public class Main {
                     System.out.println("续期配置文件不存在!");
                     logger.info("续期配置文件不存在!");
                 }
-                if (renew && renewFile.exists()) {
+                if (renewFile.exists()) {
+                    System.out.println("续期配置文件存在,读取中");
+                    logger.info("续期配置文件存在,读取中");
                     StringBuilder stringBuilder2 = new StringBuilder();
                     BufferedReader bufferedReader2 = new BufferedReader(new FileReader(renewFile));
                     String line2;
@@ -92,20 +90,23 @@ public class Main {
                     JsonNode jsonNode2 = objectMapper.readTree(stringBuilder2.toString());
                     String seatid = jsonNode2.get("seatid").asText();
                     String oldtime = jsonNode2.get("datetime").asText();
-                    String oldjobid = jsonNode2.get("jobid").asText();
+                    oldjobid = jsonNode2.get("jobid").asText();
 
-                    ArrayList<String> strings = new ArrayList<>();
-                    strings.add(seatid);
                     bufferedReader2.close();
+                    if (renew) {
+                        ArrayList<String> strings = new ArrayList<>();
+                        strings.add(seatid);
 
-                    b = new Bean(strings, jsonNode.get("unionid").asText(), Boolean.parseBoolean(jsonNode.get("autorenew").asText()), 0, null);
-                    Login.getToken(b, seatid, renew, oldtime, oldjobid);
-                } else {
+                        b = new Bean(strings, jsonNode.get("unionid").asText(), Boolean.parseBoolean(jsonNode.get("autorenew").asText()), 0, null);
+                        Login.getToken(b, seatid, oldtime, oldjobid);
+                    }
+                }
+                if (!renew) {
 
                     b = new Bean(seats, jsonNode.get("unionid").asText(), Boolean.parseBoolean(jsonNode.get("autorenew").asText()), 0, null);
 
                     for (String seat : seats) {
-                        int code = Login.getToken(b, seat, renew, null, null);
+                        int code = Login.getToken(b, seat, null, oldjobid);
                         if (code == Login.LIBRARY_OR_USER_UNAVAILABLE || code == Login.SEAT_OK) {
                             break;
                         }
@@ -118,17 +119,19 @@ public class Main {
     }
 
     public static ArrayList<String> jsnode2arrlist(String jsnd) {
-        ArrayList<String> arrayList = new ArrayList();
+        ArrayList<String> arrayList = new ArrayList<>();
 //    System.out.println(jsnd);
         for (String s : jsnd.split(",")) {
 //        System.out.println(s);
             arrayList.add(
                     s.split(":")[1].strip().replace("\"", "").replace("{", "").replace("}", "").replace("[", "").replace("]", ""));
         }
+        StringBuilder ss = new StringBuilder();
         for (String s : arrayList) {
-            System.out.println(s);
-            logger.info(s);
+            ss.append(s).append(" ");
         }
+        System.out.println("读取到座位id列表: " + ss);
+        logger.info("读取到座位id列表: " + ss);
         return arrayList;
     }
 }
