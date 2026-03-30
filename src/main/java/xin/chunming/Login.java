@@ -51,6 +51,7 @@ public class Login {
                 .build();
 
     }
+
     private static final Logger logger = LoggerFactory.getLogger(Login.class);
 
     private static ObjectMapper objectMapper = new ObjectMapper();
@@ -119,10 +120,9 @@ public class Login {
                 if (code.equals("1")) {
                     System.out.println("错误: getToken" + message);
                     logger.info("错误: getToken" + message);
-                    if (message.contains("设备不在开放时间")||message.contains("即将闭馆")||message.contains("您预约的不是当前设备")||(message.contains("请去")&&message.contains("处扫描二维码"))){
+                    if (message.contains("设备不在开放时间") || message.contains("即将闭馆") || message.contains("您预约的不是当前设备") || (message.contains("请去") && message.contains("处扫描二维码"))) {
                         return LIBRARY_OR_USER_UNAVAILABLE;
-                    }
-                    else return SEAT_ERROR;
+                    } else return SEAT_ERROR;
                 }
                 if (code.equals("0") && jsonNode.get("data") != null) {
                     String token = jsonNode.get("data").get("token").asText();
@@ -136,10 +136,18 @@ public class Login {
                         System.out.println("预约未结束 还剩" + jsonNode.get("data").get("duration"));
                         logger.info("预约未结束 还剩" + jsonNode.get("data").get("duration"));
                         if (bean.isRenew()) {
-                          String hour =  jsonNode.get("data").get("duration").asText().split("时")[0].strip();
-                          String minute =  jsonNode.get("data").get("duration").asText().split("时")[1].split("分")[0].strip();
-                          int durationMinute= Integer.parseInt(hour)*60+Integer.parseInt(minute)+1;
-                            renewwriter.configWriter(path, String.valueOf(durationMinute), seatid, jarPath, jobid, oldtime);
+                            String hour = jsonNode.get("data").get("duration").asText().split("时")[0].strip();
+                            String minute = jsonNode.get("data").get("duration").asText().split("时")[1].split("分")[0].strip();
+                            int durationMinute = Integer.parseInt(hour) * 60 + Integer.parseInt(minute) + 1;
+
+                            if (LocalDateTime.now().getHour() <= 17) {
+                                renewwriter.configWriter(path, String.valueOf(durationMinute), seatid, jarPath, jobid, oldtime);
+
+                            } else {
+                                System.out.println("时间晚于下午5点,停止安排计划续期!");
+                                logger.info("时间晚于下午5点,停止安排计划续期!");
+
+                            }
 
 
                         }
@@ -199,11 +207,11 @@ public class Login {
                 if (code.equals("1")) {
                     System.out.println("错误: /phoneSeatReserve/duration " + message);
                     logger.info("错误: /phoneSeatReserve/duration " + message);
-                    if (message.contains("设备不在开放时间")||message.contains("即将闭馆")||message.contains("您预约的不是当前设备")||(message.contains("请去")&&message.contains("处扫描二维码"))){
+                    if (message.contains("设备不在开放时间") || message.contains("即将闭馆") || message.contains("您预约的不是当前设备") || (message.contains("请去") && message.contains("处扫描二维码"))) {
                         return LIBRARY_OR_USER_UNAVAILABLE;
                     }
 
-/*您预约的不是当前设备*/
+                    /*您预约的不是当前设备*/
 
                 }
                 if (code.equals("0") && jsonNode.get("data") != null) {
@@ -275,10 +283,18 @@ public class Login {
                     if (msg.contains("操作成功")) {
                         System.out.println("订座/续订 操作成功!");
                         logger.info("订座/续订 操作成功!");
-                        if (bean.isRenew() && LocalDateTime.now().getHour() < 16 ) {//本次续期/订座 只有小于下午3点 才可配置自动续期
+                        if (bean.isRenew() && LocalDateTime.now().getHour() > 16) {//本次续期/订座 只有小于下午3点 才可配置自动续期
                             renewwriter.configWriter(path, String.valueOf(times), seatid, jarPath, jobid, oldtime);
+                            return SEAT_OK;
+
+                        } else {
+                            System.out.println("时间晚于下午4点,停止安排计划续期!");
+                            logger.info("时间晚于下午4点,停止安排计划续期!");
+                            return SEAT_OK;
+
                         }
-                        return SEAT_OK;
+
+
                     } else {
                         System.out.println("发生问题: phoneSeatReserve/duration " + message);
                         logger.info("发生问题: phoneSeatReserve/duration " + message);
