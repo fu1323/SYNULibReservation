@@ -65,6 +65,7 @@ public class Main {
                     """);
             bufferedWriter.flush();
             bufferedWriter.close();
+            System.exit(0);
         } else {
             StringBuilder stringBuilder = new StringBuilder();
             BufferedReader bufferedReader = new BufferedReader(new FileReader(configFile));
@@ -94,7 +95,7 @@ public class Main {
 
 //                ArrayList<String> seats = jsnode2arrlist(jsonNode.get("seatid").);
                 Bean b = null;
-                if (!renewFile.exists()) {
+                if (!renewFile.exists()&&renew) {
                     System.out.println("续期配置文件不存在!");
                     logger.info("续期配置文件不存在!");
                 }
