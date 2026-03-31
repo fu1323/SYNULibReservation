@@ -8,6 +8,9 @@ public class Bean {
     private String unionId;
     private boolean renew;
     private int miniute;
+    private int lastRenewHour;
+    private int lastRenewMinute;
+
 
     public int getMiniute() {
         return miniute;
@@ -39,6 +42,22 @@ public class Bean {
         return renew;
     }
 
+    public int getLastRenewHour() {
+        return lastRenewHour;
+    }
+
+    public void setLastRenewHour(int lastRenewHour) {
+        this.lastRenewHour = lastRenewHour;
+    }
+
+    public int getLastRenewMinute() {
+        return lastRenewMinute;
+    }
+
+    public void setLastRenewMinute(int lastRenewMinute) {
+        this.lastRenewMinute = lastRenewMinute;
+    }
+
     public void setRenew(boolean renew) {
         this.renew = renew;
     }
@@ -51,11 +70,16 @@ public class Bean {
         this.seatId = seatId;
     }
 
-    public Bean(HashMap<String, String> seatId, String unionId, boolean renew, int miniute, String token) {
+    public Bean() {
+    }
+
+    public Bean(HashMap<String, String> seatId, String unionId, boolean renew, int miniute, int lastRenewHour, int lastRenewMinute, String token) {
         this.seatId = seatId;
         this.unionId = unionId;
         this.renew = renew;
         this.miniute = miniute;
+        this.lastRenewHour = lastRenewHour;
+        this.lastRenewMinute = lastRenewMinute;
         this.token = token;
     }
 

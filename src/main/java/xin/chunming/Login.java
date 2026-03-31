@@ -14,6 +14,7 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -73,6 +74,7 @@ public class Login {
         Login.jarPath = jarPath;
     }
 
+    private static boolean before;
     private static String path;
     public static final int SEAT_ERROR = 1;
     public static final int LIBRARY_OR_USER_UNAVAILABLE = 2;
@@ -139,13 +141,15 @@ public class Login {
                             String hour = jsonNode.get("data").get("duration").asText().split("时")[0].strip();
                             String minute = jsonNode.get("data").get("duration").asText().split("时")[1].split("分")[0].strip();
                             int durationMinute = Integer.parseInt(hour) * 60 + Integer.parseInt(minute) + 1;
+                            before = LocalTime.now().isBefore(LocalTime.of(bean.getLastRenewHour(), bean.getLastRenewMinute()));
 
-                            if (LocalDateTime.now().getHour() <= 17) {
+                            if (before) {
                                 renewwriter.configWriter(path, String.valueOf(durationMinute), seatid, jarPath, jobid, oldtime);
 
                             } else {
-                                System.out.println("时间晚于下午5点,停止安排计划续期!");
-                                logger.info("时间晚于下午5点,停止安排计划续期!");
+                                System.out.println("时间晚于" + bean.getLastRenewHour() + "点" + bean.getLastRenewMinute() + "分 ,停止安排计划续期!");
+                                logger.info("时间晚于" + bean.getLastRenewHour() + "点" + bean.getLastRenewMinute() + "分 ,停止安排计划续期!");
+
 
                             }
 
@@ -283,13 +287,19 @@ public class Login {
                     if (msg.contains("操作成功")) {
                         System.out.println("订座/续订 操作成功!");
                         logger.info("订座/续订 操作成功!");
-                        if (bean.isRenew() && LocalDateTime.now().getHour() < 16) {//本次续期/订座 只有小于下午3点 才可配置自动续期
+
+
+                        before = LocalTime.now().isBefore(LocalTime.of(bean.getLastRenewHour(), bean.getLastRenewMinute()));
+
+
+                        if (bean.isRenew() && before) {//本次续期/订座 只有小于下午3点 才可配置自动续期
                             renewwriter.configWriter(path, String.valueOf(times), seatid, jarPath, jobid, oldtime);
                             return SEAT_OK;
 
                         } else {
-                            System.out.println("时间晚于下午4点,停止安排计划续期!");
-                            logger.info("时间晚于下午4点,停止安排计划续期!");
+                            System.out.println("时间晚于" + bean.getLastRenewHour() + "点" + bean.getLastRenewMinute() + "分 ,停止安排计划续期!");
+                            logger.info("时间晚于" + bean.getLastRenewHour() + "点" + bean.getLastRenewMinute() + "分 ,停止安排计划续期!");
+
                             return SEAT_OK;
 
                         }

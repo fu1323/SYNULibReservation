@@ -51,13 +51,16 @@ public class Main {
             logger.info("配置文件不存在 已创建 请填写配置文件！");
             BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(configFile));
             bufferedWriter.write("""
-                    { "unionid":"改成你自己的unionid","seatid":{
+                    { "unionid":"改成你自己的unionid",
+                    "seatid":{
                     
                       "id0(必须从0开始)": "改成座位id1",
                       "id1": "改成座位id1, 可灵活修改",
                       "id2": "123123123"
                     },
-                       "autorenew": "false"
+                       "autorenew": "false",
+                       "stop_renew_hour": "16",
+                       "stop_renew_minute": "00"
                     }
                     """);
             bufferedWriter.flush();
@@ -70,7 +73,7 @@ public class Main {
 //                System.out.println(line);
                 stringBuilder.append(line);
             }
-            if (stringBuilder.toString().contains("改成你自己的unionid")) {
+            if (stringBuilder.toString().contains("改成你自己的union_id")) {
                 System.out.println("配置文件不合法 请修改");
                 logger.info("配置文件不合法 请修改");
 
@@ -116,13 +119,17 @@ public class Main {
                         HashMap<String, String> seatsMaptmp = new HashMap<>();
                         seatsMaptmp.put("id0", seatid);
 
-                        b = new Bean(seatsMaptmp, jsonNode.get("unionid").asText(), Boolean.parseBoolean(jsonNode.get("autorenew").asText()), 0, null);
+
+                        b=new Bean(seatsMaptmp,jsonNode.get("unionid").asText(),Boolean.parseBoolean(jsonNode.get("autorenew").asText()),0,
+                        Integer.parseInt(jsonNode.get("stop_renew_hour").asText()),
+                        Integer.parseInt(jsonNode.get("stop_renew_minute").asText()),null);
                         Login.getToken(b, seatid, oldtime, oldjobid);
                     }
                 }
                 if (!renew) {
-
-                    b = new Bean(seatsMap, jsonNode.get("unionid").asText(), Boolean.parseBoolean(jsonNode.get("autorenew").asText()), 0, null);
+                    b=new Bean(seatsMap,jsonNode.get("unionid").asText(),Boolean.parseBoolean(jsonNode.get("autorenew").asText()),0,
+                            Integer.parseInt(jsonNode.get("stop_renew_hour").asText()),
+                            Integer.parseInt(jsonNode.get("stop_renew_minute").asText()),null);
                     for (int i = 0; i < seatsMap.size(); i++) {
                         if (seatsMap.get("id" + i).isBlank() || seatsMap.get("id" + i).isBlank()) {
                             continue;
