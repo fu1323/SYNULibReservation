@@ -283,7 +283,7 @@ public class Login {
                     if (msg.contains("操作成功")) {
                         System.out.println("订座/续订 操作成功!");
                         logger.info("订座/续订 操作成功!");
-                        if (bean.isRenew() && LocalDateTime.now().getHour() > 16) {//本次续期/订座 只有小于下午3点 才可配置自动续期
+                        if (bean.isRenew() && LocalDateTime.now().getHour() < 16) {//本次续期/订座 只有小于下午3点 才可配置自动续期
                             renewwriter.configWriter(path, String.valueOf(times), seatid, jarPath, jobid, oldtime);
                             return SEAT_OK;
 

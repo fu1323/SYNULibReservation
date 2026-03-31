@@ -8,14 +8,19 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 //TIP 要<b>运行</b>代码，请按 <shortcut actionId="Run"/> 或
 // 点击装订区域中的 <icon src="AllIcons.Actions.Execute"/> 图标。
 public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
     private static String oldjobid;
+    private static HashMap<String, String> seatsMap = new HashMap<>();
 
     public static void main(String[] args) throws URISyntaxException, IOException {
+
 
         String appPath = PathUtil.getAppPath();
         System.setProperty("LOG_DIR", appPath + File.separator + "logs");
@@ -46,11 +51,12 @@ public class Main {
             logger.info("配置文件不存在 已创建 请填写配置文件！");
             BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(configFile));
             bufferedWriter.write("""
-                    { "unionid":"改成你自己的unionid","seatid":
-                    [
-                      {"id": "改成座位id1"},
-                      {"id": "改成座位id2, 可灵活修改"}
-                    ],
+                    { "unionid":"改成你自己的unionid","seatid":{
+                    
+                      "id0(必须从0开始)": "改成座位id1",
+                      "id1": "改成座位id1, 可灵活修改",
+                      "id2": "123123123"
+                    },
                        "autorenew": "false"
                     }
                     """);
@@ -71,7 +77,19 @@ public class Main {
             } else {
                 ObjectMapper objectMapper = new ObjectMapper();
                 JsonNode jsonNode = objectMapper.readTree(stringBuilder.toString());
-                ArrayList<String> seats = jsnode2arrlist(jsonNode.get("seatid").toString());
+                int seatid1 = jsonNode.get("seatid").size();
+                System.out.println(seatid1 + "个座位");
+                logger.info(seatid1 + "个座位");
+
+                jsonNode.get("seatid").forEachEntry(new BiConsumer<String, JsonNode>() {
+                    @Override
+                    public void accept(String key, JsonNode value) {
+                        seatsMap.put(key, value.asText());
+                    }
+                });
+
+
+//                ArrayList<String> seats = jsnode2arrlist(jsonNode.get("seatid").);
                 Bean b = null;
                 if (!renewFile.exists()) {
                     System.out.println("续期配置文件不存在!");
@@ -94,23 +112,29 @@ public class Main {
 
                     bufferedReader2.close();
                     if (renew) {
-                        ArrayList<String> strings = new ArrayList<>();
-                        strings.add(seatid);
 
-                        b = new Bean(strings, jsonNode.get("unionid").asText(), Boolean.parseBoolean(jsonNode.get("autorenew").asText()), 0, null);
+                        HashMap<String, String> seatsMaptmp = new HashMap<>();
+                        seatsMaptmp.put("id0", seatid);
+
+                        b = new Bean(seatsMaptmp, jsonNode.get("unionid").asText(), Boolean.parseBoolean(jsonNode.get("autorenew").asText()), 0, null);
                         Login.getToken(b, seatid, oldtime, oldjobid);
                     }
                 }
                 if (!renew) {
 
-                    b = new Bean(seats, jsonNode.get("unionid").asText(), Boolean.parseBoolean(jsonNode.get("autorenew").asText()), 0, null);
-
-                    for (String seat : seats) {
-                        int code = Login.getToken(b, seat, null, oldjobid);
+                    b = new Bean(seatsMap, jsonNode.get("unionid").asText(), Boolean.parseBoolean(jsonNode.get("autorenew").asText()), 0, null);
+                    for (int i = 0; i < seatsMap.size(); i++) {
+                        if (seatsMap.get("id" + i).isBlank() || seatsMap.get("id" + i).isBlank()) {
+                            continue;
+                        }
+                        int code = Login.getToken(b, seatsMap.get("id" + i), null, oldjobid);
                         if (code == Login.LIBRARY_OR_USER_UNAVAILABLE || code == Login.SEAT_OK) {
                             break;
                         }
                     }
+//                    for (String seat : seats) {
+//
+//                    }
                 }
 
 
@@ -118,20 +142,20 @@ public class Main {
         }
     }
 
-    public static ArrayList<String> jsnode2arrlist(String jsnd) {
-        ArrayList<String> arrayList = new ArrayList<>();
-//    System.out.println(jsnd);
-        for (String s : jsnd.split(",")) {
-//        System.out.println(s);
-            arrayList.add(
-                    s.split(":")[1].strip().replace("\"", "").replace("{", "").replace("}", "").replace("[", "").replace("]", ""));
-        }
-        StringBuilder ss = new StringBuilder();
-        for (String s : arrayList) {
-            ss.append(s).append(" ");
-        }
-        System.out.println("读取到座位id列表: " + ss);
-        logger.info("读取到座位id列表: " + ss);
-        return arrayList;
-    }
+//    public static ArrayList<String> jsnode2arrlist(String jsnd) {
+//        ArrayList<String> arrayList = new ArrayList<>();
+////    System.out.println(jsnd);
+//        for (String s : jsnd.split(",")) {
+////        System.out.println(s);
+//            arrayList.add(
+//                    s.split(":")[1].strip().replace("\"", "").replace("{", "").replace("}", "").replace("[", "").replace("]", ""));
+//        }
+//        StringBuilder ss = new StringBuilder();
+//        for (String s : arrayList) {
+//            ss.append(s).append(" ");
+//        }
+//        System.out.println("读取到座位id列表: " + ss);
+//        logger.info("读取到座位id列表: " + ss);
+//        return arrayList;
+//    }
 }

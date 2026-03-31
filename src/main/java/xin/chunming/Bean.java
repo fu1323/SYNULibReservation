@@ -1,9 +1,10 @@
 package xin.chunming;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class Bean {
-    private ArrayList<String> seatId;
+    private HashMap<String,String> seatId;
     private String unionId;
     private boolean renew;
     private int miniute;
@@ -16,13 +17,7 @@ public class Bean {
         this.miniute = miniute;
     }
 
-    public ArrayList<String> getSeatId() {
-        return seatId;
-    }
 
-    public void setSeatId(ArrayList<String> seatId) {
-        this.seatId = seatId;
-    }
 
     public String getUnionId() {
         return unionId;
@@ -48,7 +43,15 @@ public class Bean {
         this.renew = renew;
     }
 
-    public Bean(ArrayList<String> seatId, String unionId, boolean renew, int miniute, String token) {
+    public HashMap<String, String> getSeatId() {
+        return seatId;
+    }
+
+    public void setSeatId(HashMap<String, String> seatId) {
+        this.seatId = seatId;
+    }
+
+    public Bean(HashMap<String, String> seatId, String unionId, boolean renew, int miniute, String token) {
         this.seatId = seatId;
         this.unionId = unionId;
         this.renew = renew;
