@@ -1,7 +1,7 @@
-#某学校图书馆自动座位预约系统<br>
+#某学校（如沈阳师范大学）图书馆座位预约系统的自动化预约实现（利用了联创服务器用客户端302传unionid给学校服务器的问题,本程序绕过了密码登陆,直接用unionid换token） 针对杭州联创的系统  <br>
 ##使用说明<br>
 请自行编译，java -jar xxx.jar 可看到效果，初次运行会生成json配置文件，抓包填写即可 <br>
-renew字段默认false，改成true可自动续期（自动续期对windows无效 因为使用at命令 windows逻辑请自行处理）<br>
+renew字段默认false，改成true可自动续期（仅macos、LINUX,自动续期对windows无效 因为使用了at命令 windows逻辑请自行处理）<br>
 座位可填写多个不限制，当程序运行发现座位被占用会依次尝试<br>
 unionid 座位id(devSn)可通过抓包获得，自己微信扫桌子上的二维码的时候抓包即可<br>
 续期通常自动执行(实际是java -jar xxx.jar renew，开启续期会自动生成renew.json,同时插入at自动任务 <br>图书馆闭馆时间是晚上十点，而单次最大预约市场五小时，所以若在下午四点之后 程序执行将不会再排今天的续期定时任务)<br>
