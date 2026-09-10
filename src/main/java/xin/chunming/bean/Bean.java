@@ -6,6 +6,7 @@ public class Bean {
     private HashMap<String,String> seatId;
     private String unionId;
     private boolean renew;
+    private boolean fallback;
     private int miniute;
     private int lastRenewHour;
     private int lastRenewMinute;
@@ -45,6 +46,25 @@ public class Bean {
         return lastRenewHour;
     }
 
+    public boolean isFallback() {
+        return fallback;
+    }
+
+    public void setFallback(boolean fallback) {
+        this.fallback = fallback;
+    }
+
+    public Bean(HashMap<String, String> seatId, String unionId, boolean renew, boolean fallback, int miniute, int lastRenewHour, int lastRenewMinute, String token) {
+        this.seatId = seatId;
+        this.unionId = unionId;
+        this.renew = renew;
+        this.fallback = fallback;
+        this.miniute = miniute;
+        this.lastRenewHour = lastRenewHour;
+        this.lastRenewMinute = lastRenewMinute;
+        this.token = token;
+    }
+
     public void setLastRenewHour(int lastRenewHour) {
         this.lastRenewHour = lastRenewHour;
     }
@@ -72,14 +92,8 @@ public class Bean {
     public Bean() {
     }
 
-    public Bean(HashMap<String, String> seatId, String unionId, boolean renew, int miniute, int lastRenewHour, int lastRenewMinute, String token) {
-        this.seatId = seatId;
-        this.unionId = unionId;
-        this.renew = renew;
-        this.miniute = miniute;
-        this.lastRenewHour = lastRenewHour;
-        this.lastRenewMinute = lastRenewMinute;
-        this.token = token;
+    public Bean(HashMap<String, String> seatId, String unionId, boolean renew, int miniute, int lastRenewHour, int lastRenewMinute,boolean fallback,String token) {
+
     }
 
     private String token;

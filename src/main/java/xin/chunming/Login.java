@@ -81,6 +81,7 @@ public class Login {
     private static String path;
     public static final int SEAT_ERROR = 1;
     public static final int LIBRARY_OR_USER_UNAVAILABLE = 2;
+    public static final int OCCUPIED = 3;
     public static final int SEAT_OK = 0;
 
     public static int getToken(Bean bean, String seatid, String oldtime, String jobid, String trycount) throws IOException {
@@ -125,6 +126,7 @@ public class Login {
                 if (code.equals("1")) {
                     System.out.println("错误: getToken" + message);
                     logger.info("错误: getToken" + message);
+                    if (message.contains("设备在该时间段内已被预约")){return OCCUPIED;}
                     if (message.contains("设备不在开放时间") || message.contains("即将闭馆") || message.contains("您预约的不是当前设备") || (message.contains("请去") && message.contains("处扫描二维码"))) {
                         return LIBRARY_OR_USER_UNAVAILABLE;
                     } else return SEAT_ERROR;
@@ -147,7 +149,7 @@ public class Login {
                             before = LocalTime.now().isBefore(LocalTime.of(bean.getLastRenewHour(), bean.getLastRenewMinute()));
 
                             if (before) {
-                                renewwriter.configWriter(path, String.valueOf(durationMinute), seatid, jarPath, jobid, oldtime, false, Integer.parseInt(trycount));
+                                renewwriter.configWriter(path, String.valueOf(durationMinute), seatid, jarPath, jobid, oldtime, false, Integer.parseInt(trycount),bean.isFallback());
 
                             } else {
                                 System.out.println("时间晚于" + bean.getLastRenewHour() + "点" + bean.getLastRenewMinute() + "分 ,停止安排计划续期!");
@@ -198,7 +200,7 @@ public class Login {
                                     } else {
                                         System.out.println("五分钟后再试!");
                                         logger.info("五分钟后再试!");
-                                        renewwriter.configWriter(path, String.valueOf(5), seatid, jarPath, jobid, oldtime, true, Integer.parseInt(trycount));
+                                        renewwriter.configWriter(path, String.valueOf(5), seatid, jarPath, jobid, oldtime, true, Integer.parseInt(trycount),bean.isFallback());
                                     }
                                     return SEAT_ERROR;
                                 }
@@ -257,6 +259,8 @@ public class Login {
                 if (code.equals("1")) {
                     System.out.println("错误: /phoneSeatReserve/duration " + message);
                     logger.info("错误: /phoneSeatReserve/duration " + message);
+                    if (message.contains("设备在该时间段内已被预约")){return OCCUPIED;}
+
                     if (message.contains("设备不在开放时间") || message.contains("即将闭馆") || message.contains("您预约的不是当前设备") || (message.contains("请去") && message.contains("处扫描二维码"))) {
                         return LIBRARY_OR_USER_UNAVAILABLE;
                     }
@@ -332,6 +336,8 @@ public class Login {
                 if (code.equals("1")) {
                     System.out.println("错误: phoneSeatReserve/duration " + message);
                     logger.info("错误: phoneSeatReserve/duration " + message);
+                    if (message.contains("设备在该时间段内已被预约")){return OCCUPIED;}
+
                     return SEAT_ERROR;
 
                 }
@@ -346,7 +352,7 @@ public class Login {
 
 
                         if (bean.isRenew() && before) {//本次续期/订座 只有小于下午3点 才可配置自动续期
-                            renewwriter.configWriter(path, String.valueOf(times), seatid, jarPath, jobid, oldtime, false, Integer.parseInt(trycount));
+                            renewwriter.configWriter(path, String.valueOf(times), seatid, jarPath, jobid, oldtime, false, Integer.parseInt(trycount),bean.isFallback());
                             return SEAT_OK;
 
                         } else {

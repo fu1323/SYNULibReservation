@@ -20,6 +20,7 @@ public class Main {
     private static String oldjobid;
     private static HashMap<String, String> seatsMap = new HashMap<>();
 
+public static Bean b = null;
     public static void main(String[] args) throws URISyntaxException, IOException {
 
 
@@ -62,6 +63,7 @@ public class Main {
                        "autorenew": "false",
                        "stop_renew_hour": "16",
                        "stop_renew_minute": "00"
+                       "fallback": "false"
                     }
                     """);
             bufferedWriter.flush();
@@ -99,7 +101,6 @@ public class Main {
                 });
 
 //                ArrayList<String> seats = jsnode2arrlist(jsonNode.get("seatid").);
-                Bean b = null;
                 if (!renewFile.exists() && renew) {
                     System.out.println("续期配置文件不存在!");
                     logger.info("续期配置文件不存在!");
@@ -114,10 +115,12 @@ public class Main {
 //                System.out.println(line);
                         stringBuilder2.append(line2);
                     }
+                    //Reading renew.json
                     JsonNode jsonNode2 = objectMapper.readTree(stringBuilder2.toString());
                     String seatid = jsonNode2.get("seatid").asText();
                     String oldtime = jsonNode2.get("datetime").asText();
                     String trycount = jsonNode2.get("trycount").asText();
+
                     oldjobid = jsonNode2.get("jobid").asText();
 
                     bufferedReader2.close();
@@ -129,36 +132,47 @@ public class Main {
 
                         b = new Bean(seatsMaptmp, jsonNode.get("unionid").asText(), Boolean.parseBoolean(jsonNode.get("autorenew").asText()), 0,
                                 Integer.parseInt(jsonNode.get("stop_renew_hour").asText()),
-                                Integer.parseInt(jsonNode.get("stop_renew_minute").asText()), null);
-                        Login.getToken(b, seatid, oldtime, oldjobid, trycount);
+                                Integer.parseInt(jsonNode.get("stop_renew_minute").asText()),
+                                Boolean.parseBoolean(jsonNode.get("fallback").asText()),
+                                null);
+                        int token = Login.getToken(b, seatid, oldtime, oldjobid, trycount);
+                        if (token==Login.OCCUPIED&&b.isFallback()){
+                            System.out.println("座位续期被占,fallback尝试重新预约新座位!");
+                                   logger.info("座位续期被占,fallback尝试重新预约新座位!");
+                            normalbooking(jsonNode);
+                        }
                     }
                 }
                 if (!renew) {
-                    b = new Bean(seatsMap, jsonNode.get("unionid").asText(), Boolean.parseBoolean(jsonNode.get("autorenew").asText()), 0,
-                            Integer.parseInt(jsonNode.get("stop_renew_hour").asText()),
-                            Integer.parseInt(jsonNode.get("stop_renew_minute").asText()), null);
-                    int a = seatsMap.size();
-                    for (int i = 0; i < a; i++) {
-                        if (seatsMap.get("id" + i) == null) {
-                            a++;
-                            continue;
-                        }
-                        if (seatsMap.get("id" + i).isBlank() || seatsMap.get("id" + i).isEmpty()) {
-                            continue;
-                        }
-                       int code = Login.getToken(b, seatsMap.get("id" + i), null, oldjobid, String.valueOf(0));
-                       if (code == Login.LIBRARY_OR_USER_UNAVAILABLE || code == Login.SEAT_OK) {
-                           break;
-                       }
-                        System.out.println(seatsMap.get("id" + i));
-                    }
-//                    for (String seat : seats) {
-//
-//                    }
+                    normalbooking(jsonNode);
                 }
 
 
             }
+        }
+    }
+
+    private static void normalbooking(JsonNode jsonNode) throws IOException {
+       // Bean b;
+        b = new Bean(seatsMap, jsonNode.get("unionid").asText(), Boolean.parseBoolean(jsonNode.get("autorenew").asText()), 0,
+                Integer.parseInt(jsonNode.get("stop_renew_hour").asText()),
+                Integer.parseInt(jsonNode.get("stop_renew_minute").asText()),
+                Boolean.parseBoolean(jsonNode.get("fallback").asText()),
+                null);
+        int a = seatsMap.size();
+        for (int i = 0; i < a; i++) {
+            if (seatsMap.get("id" + i) == null) {
+                a++;
+                continue;
+            }
+            if (seatsMap.get("id" + i).isBlank() || seatsMap.get("id" + i).isEmpty()) {
+                continue;
+            }
+           int code = Login.getToken(b, seatsMap.get("id" + i), null, oldjobid, String.valueOf(0));
+           if (code == Login.LIBRARY_OR_USER_UNAVAILABLE || code == Login.SEAT_OK) {
+               break;
+           }
+            System.out.println(seatsMap.get("id" + i));
         }
     }
 

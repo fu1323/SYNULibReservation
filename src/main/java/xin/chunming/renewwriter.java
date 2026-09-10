@@ -12,7 +12,7 @@ public class renewwriter {
 
     private static final Logger logger = LoggerFactory.getLogger(renewwriter.class);
 
-    public static void configWriter(String renewjsonpath, String miniute, String seatid, String jarpath, String oldjobid, String oldtime,boolean weishifang,int weishifangcount) throws IOException, InterruptedException {
+    public static void configWriter(String renewjsonpath, String miniute, String seatid, String jarpath, String oldjobid, String oldtime,boolean weishifang,int weishifangcount,boolean fallback) throws IOException, InterruptedException {
         LocalDateTime now = LocalDateTime.now();
         String jobid = null;
         if (!(oldjobid == null || oldjobid.equals(""))) {
@@ -97,6 +97,7 @@ public class renewwriter {
         BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(renewjsonpath + File.separator + "renew.json")));
 
         bufferedWriter.write("{\n" +
+               // "\"fallback\":\""+fallback+"\", "+
                 "  \"datetime\": \"" + nexttime + "\",\n" +
                 "  \"seatid\": \"" + seatid + "\",\n" +
                 "  \"jobid\": \"" + (jobid == null ? "" : jobid) + "\",\n" +
