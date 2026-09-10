@@ -9,7 +9,9 @@ import xin.chunming.bean.Bean;
 import java.io.*;
 import java.net.URISyntaxException;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 //TIP 要<b>运行</b>代码，请按 <shortcut actionId="Run"/> 或
 // 点击装订区域中的 <icon src="AllIcons.Actions.Execute"/> 图标。
@@ -51,12 +53,12 @@ public class Main {
             BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(configFile));
             bufferedWriter.write("""
                     { "unionid":"改成你自己的unionid",
-                    "seatid":{
+                    "seatid":[
                     
-                      "id0(必须从0开始)": "改成座位id1",
-                      "id1": "改成座位id1, 可灵活修改",
-                      "id2": "123123123"
-                    },
+                      {"id0(必须从0开始)": "改成座位id1","comment":"座位号(方便人类阅读)(如A-123)"},
+                      {"id1": "改成座位id1, 可灵活修改","comment":"4F A-123"},
+                      {"id2": "123123123(数量不限,id后的数字为优先级)","comment":"3F B-567"}
+                    ],
                        "autorenew": "false",
                        "stop_renew_hour": "16",
                        "stop_renew_minute": "00"
@@ -84,17 +86,21 @@ public class Main {
                 System.out.println(seatid1 + "个座位");
                 logger.info(seatid1 + "个座位");
 
-                jsonNode.get("seatid").forEachEntry(new BiConsumer<String, JsonNode>() {
-                    @Override
-                    public void accept(String key, JsonNode value) {
-                        seatsMap.put(key, value.asText());
-                    }
-                });
+                jsonNode.get("seatid").forEach(s -> {
+                    s.fields().forEachRemaining(new Consumer<Map.Entry<String, JsonNode>>() {
+                        @Override
+                        public void accept(Map.Entry<String, JsonNode> stringJsonNodeEntry) {
 
+                            if (!stringJsonNodeEntry.getKey().equalsIgnoreCase("comment")) {
+                                seatsMap.put(stringJsonNodeEntry.getKey(), String.valueOf(stringJsonNodeEntry.getValue()).replaceAll("\"",""));
+                            }
+                        }
+                    });
+                });
 
 //                ArrayList<String> seats = jsnode2arrlist(jsonNode.get("seatid").);
                 Bean b = null;
-                if (!renewFile.exists()&&renew) {
+                if (!renewFile.exists() && renew) {
                     System.out.println("续期配置文件不存在!");
                     logger.info("续期配置文件不存在!");
                 }
@@ -121,24 +127,30 @@ public class Main {
                         seatsMaptmp.put("id0", seatid);
 
 
-                        b=new Bean(seatsMaptmp,jsonNode.get("unionid").asText(),Boolean.parseBoolean(jsonNode.get("autorenew").asText()),0,
-                        Integer.parseInt(jsonNode.get("stop_renew_hour").asText()),
-                        Integer.parseInt(jsonNode.get("stop_renew_minute").asText()),null);
-                        Login.getToken(b, seatid, oldtime, oldjobid,trycount);
+                        b = new Bean(seatsMaptmp, jsonNode.get("unionid").asText(), Boolean.parseBoolean(jsonNode.get("autorenew").asText()), 0,
+                                Integer.parseInt(jsonNode.get("stop_renew_hour").asText()),
+                                Integer.parseInt(jsonNode.get("stop_renew_minute").asText()), null);
+                        Login.getToken(b, seatid, oldtime, oldjobid, trycount);
                     }
                 }
                 if (!renew) {
-                    b=new Bean(seatsMap,jsonNode.get("unionid").asText(),Boolean.parseBoolean(jsonNode.get("autorenew").asText()),0,
+                    b = new Bean(seatsMap, jsonNode.get("unionid").asText(), Boolean.parseBoolean(jsonNode.get("autorenew").asText()), 0,
                             Integer.parseInt(jsonNode.get("stop_renew_hour").asText()),
-                            Integer.parseInt(jsonNode.get("stop_renew_minute").asText()),null);
-                    for (int i = 0; i < seatsMap.size(); i++) {
-                        if (seatsMap.get("id" + i).isBlank() || seatsMap.get("id" + i).isBlank()) {
+                            Integer.parseInt(jsonNode.get("stop_renew_minute").asText()), null);
+                    int a = seatsMap.size();
+                    for (int i = 0; i < a; i++) {
+                        if (seatsMap.get("id" + i) == null) {
+                            a++;
                             continue;
                         }
-                        int code = Login.getToken(b, seatsMap.get("id" + i), null, oldjobid,String.valueOf(0));
-                        if (code == Login.LIBRARY_OR_USER_UNAVAILABLE || code == Login.SEAT_OK) {
-                            break;
+                        if (seatsMap.get("id" + i).isBlank() || seatsMap.get("id" + i).isEmpty()) {
+                            continue;
                         }
+                       int code = Login.getToken(b, seatsMap.get("id" + i), null, oldjobid, String.valueOf(0));
+                       if (code == Login.LIBRARY_OR_USER_UNAVAILABLE || code == Login.SEAT_OK) {
+                           break;
+                       }
+                        System.out.println(seatsMap.get("id" + i));
                     }
 //                    for (String seat : seats) {
 //

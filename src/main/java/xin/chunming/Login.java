@@ -267,6 +267,9 @@ public class Login {
                 }
                 if (code.equals("0") && jsonNode.get("data") != null) {
                     String maxMiniute = jsonNode.get("data").get("max").asText();
+
+                  //  maxMiniute=String.valueOf(Integer.parseInt(maxMiniute)+30);
+
                     if (Integer.parseInt(maxMiniute) < 300) {
                         if (LocalDateTime.now().getHour() > 16) {//16点之后 maxMinute<300正常
                             bean.setMiniute(Integer.parseInt(maxMiniute));
