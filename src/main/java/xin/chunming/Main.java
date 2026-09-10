@@ -130,11 +130,11 @@ public static Bean b = null;
                         seatsMaptmp.put("id0", seatid);
 
 
-                        b = new Bean(seatsMaptmp, jsonNode.get("unionid").asText(), Boolean.parseBoolean(jsonNode.get("autorenew").asText()), 0,
+                        b = new Bean(seatsMaptmp, jsonNode.get("unionid").asText(),
+                                Boolean.parseBoolean(jsonNode.get("autorenew").asText()),
+                                Boolean.parseBoolean(jsonNode.get("fallback").asText()),0,
                                 Integer.parseInt(jsonNode.get("stop_renew_hour").asText()),
-                                Integer.parseInt(jsonNode.get("stop_renew_minute").asText()),
-                                Boolean.parseBoolean(jsonNode.get("fallback").asText()),
-                                null);
+                                Integer.parseInt(jsonNode.get("stop_renew_minute").asText()),null);
                         int token = Login.getToken(b, seatid, oldtime, oldjobid, trycount);
                         if (token==Login.OCCUPIED&&b.isFallback()){
                             System.out.println("座位续期被占,fallback尝试重新预约新座位!");
@@ -154,11 +154,12 @@ public static Bean b = null;
 
     private static void normalbooking(JsonNode jsonNode) throws IOException {
        // Bean b;
-        b = new Bean(seatsMap, jsonNode.get("unionid").asText(), Boolean.parseBoolean(jsonNode.get("autorenew").asText()), 0,
+        b = new Bean(seatsMap, jsonNode.get("unionid").asText(),
+                Boolean.parseBoolean(jsonNode.get("autorenew").asText()),
+                Boolean.parseBoolean(jsonNode.get("fallback").asText()),0,
                 Integer.parseInt(jsonNode.get("stop_renew_hour").asText()),
-                Integer.parseInt(jsonNode.get("stop_renew_minute").asText()),
-                Boolean.parseBoolean(jsonNode.get("fallback").asText()),
-                null);
+                Integer.parseInt(jsonNode.get("stop_renew_minute").asText()),null);
+
         int a = seatsMap.size();
         for (int i = 0; i < a; i++) {
             if (seatsMap.get("id" + i) == null) {

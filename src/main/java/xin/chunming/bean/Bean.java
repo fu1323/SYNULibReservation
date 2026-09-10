@@ -54,16 +54,7 @@ public class Bean {
         this.fallback = fallback;
     }
 
-    public Bean(HashMap<String, String> seatId, String unionId, boolean renew, boolean fallback, int miniute, int lastRenewHour, int lastRenewMinute, String token) {
-        this.seatId = seatId;
-        this.unionId = unionId;
-        this.renew = renew;
-        this.fallback = fallback;
-        this.miniute = miniute;
-        this.lastRenewHour = lastRenewHour;
-        this.lastRenewMinute = lastRenewMinute;
-        this.token = token;
-    }
+
 
     public void setLastRenewHour(int lastRenewHour) {
         this.lastRenewHour = lastRenewHour;
@@ -92,8 +83,15 @@ public class Bean {
     public Bean() {
     }
 
-    public Bean(HashMap<String, String> seatId, String unionId, boolean renew, int miniute, int lastRenewHour, int lastRenewMinute,boolean fallback,String token) {
-
+    public Bean(HashMap<String, String> seatId, String unionId, boolean renew, boolean fallback, int miniute, int lastRenewHour, int lastRenewMinute, String token) {
+        this.seatId = seatId;
+        this.unionId = unionId;
+        this.renew = renew;
+        this.fallback = fallback;
+        this.miniute = miniute;
+        this.lastRenewHour = lastRenewHour;
+        this.lastRenewMinute = lastRenewMinute;
+        this.token = token;
     }
 
     private String token;
