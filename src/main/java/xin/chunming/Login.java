@@ -20,8 +20,13 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Login {
+    /** 图书馆服务端时间为中国标准时间，不能依赖运行机器的默认时区。 */
+    private static final ZoneId LIBRARY_ZONE = ZoneId.of("Asia/Shanghai");
+
     private static OkHttpClient client() {
         TrustManager[] trustAllCerts = new TrustManager[]{
                 new X509TrustManager() {
@@ -83,6 +88,27 @@ public class Login {
     public static final int LIBRARY_OR_USER_UNAVAILABLE = 2;
     public static final int OCCUPIED = 3;
     public static final int SEAT_OK = 0;
+    private static final Pattern REMAINING_TIME_PART = Pattern.compile("(\\d+)\\s*(时|分|秒)");
+
+    static int remainingMinutes(String duration) {
+        int seconds = 0;
+        boolean found = false;
+        Matcher matcher = REMAINING_TIME_PART.matcher(duration == null ? "" : duration);
+        while (matcher.find()) {
+            found = true;
+            int value = Integer.parseInt(matcher.group(1));
+            switch (matcher.group(2)) {
+                case "时" -> seconds += value * 60 * 60;
+                case "分" -> seconds += value * 60;
+                case "秒" -> seconds += value;
+                default -> throw new IllegalStateException("Unexpected time unit");
+            }
+        }
+        if (!found || seconds <= 0) {
+            throw new IllegalArgumentException("无法解析剩余时间: " + duration);
+        }
+        return (seconds + 59) / 60;
+    }
 
     public static int getToken(Bean bean, String seatid, String oldtime, String jobid, String trycount) throws IOException {
 // 1. 使用 HttpUrl.Builder 自动处理参数编码
@@ -143,10 +169,17 @@ public class Login {
                         System.out.println("预约未结束 还剩" + jsonNode.get("data").get("duration"));
                         logger.info("预约未结束 还剩" + jsonNode.get("data").get("duration"));
                         if (bean.isRenew()) {
-                            String hour = jsonNode.get("data").get("duration").asText().split("时")[0].strip();
-                            String minute = jsonNode.get("data").get("duration").asText().split("时")[1].split("分")[0].strip();
-                            int durationMinute = Integer.parseInt(hour) * 60 + Integer.parseInt(minute) + 1;
-                            before = LocalTime.now().isBefore(LocalTime.of(bean.getLastRenewHour(), bean.getLastRenewMinute()));
+                            String duration = jsonNode.get("data").get("duration").asText();
+                            int durationMinute;
+                            try {
+                                durationMinute = remainingMinutes(duration);
+                            } catch (IllegalArgumentException e) {
+                                System.out.println(e.getMessage() + "，不创建续期任务。");
+                                logger.warn(e.getMessage() + "，不创建续期任务。");
+                                return SEAT_ERROR;
+                            }
+                            before = LocalTime.now(LIBRARY_ZONE)
+                                    .isBefore(LocalTime.of(bean.getLastRenewHour(), bean.getLastRenewMinute()));
 
                             if (before) {
                                 renewwriter.configWriter(path, String.valueOf(durationMinute), seatid, jarPath, jobid, oldtime, false, Integer.parseInt(trycount),bean.isFallback());
@@ -176,7 +209,7 @@ public class Login {
                                     String start = startTime.asText();
                                     String end = jsonNode2.get("resvEndOperationTime").asText();
                                     LocalDateTime startldt = Instant.ofEpochMilli(Long.parseLong(start))
-                                            .atZone(ZoneId.systemDefault())
+                                            .atZone(LIBRARY_ZONE)
                                             .toLocalDateTime();
                                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
                                     String formatted = startldt.format(formatter);
@@ -185,7 +218,7 @@ public class Login {
                                     ;
 
                                     LocalDateTime endldt = Instant.ofEpochMilli(Long.parseLong(end))
-                                            .atZone(ZoneId.systemDefault())
+                                            .atZone(LIBRARY_ZONE)
                                             .toLocalDateTime();
                                     DateTimeFormatter formatter2 = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
                                     String formatted2 = endldt.format(formatter2);
@@ -275,7 +308,7 @@ public class Login {
                   //  maxMiniute=String.valueOf(Integer.parseInt(maxMiniute)+30);
 
                     if (Integer.parseInt(maxMiniute) < 300) {
-                        if (LocalDateTime.now().getHour() > 16) {//16点之后 maxMinute<300正常
+                        if (LocalDateTime.now(LIBRARY_ZONE).getHour() > 16) {//16点之后 maxMinute<300正常
                             bean.setMiniute(Integer.parseInt(maxMiniute));
                             return booking(Integer.parseInt(maxMiniute), bean, seatid, cookie, jobid, oldtime, trycount);
 
@@ -348,19 +381,22 @@ public class Login {
                         logger.info("订座/续订 操作成功!");
 
 
-                        before = LocalTime.now().isBefore(LocalTime.of(bean.getLastRenewHour(), bean.getLastRenewMinute()));
+                        before = LocalTime.now(LIBRARY_ZONE)
+                                .isBefore(LocalTime.of(bean.getLastRenewHour(), bean.getLastRenewMinute()));
 
 
-                        if (bean.isRenew() && before) {//本次续期/订座 只有小于下午3点 才可配置自动续期
+                        if (!bean.isRenew()) {
+                            System.out.println("未开启自动续期，不创建下一次续期任务。");
+                            logger.info("未开启自动续期，不创建下一次续期任务。");
+                            return SEAT_OK;
+                        }
+                        if (before) {//本次续期/订座 只有小于设定截止时间才可配置自动续期
                             renewwriter.configWriter(path, String.valueOf(times), seatid, jarPath, jobid, oldtime, false, Integer.parseInt(trycount),bean.isFallback());
                             return SEAT_OK;
-
                         } else {
                             System.out.println("时间晚于" + bean.getLastRenewHour() + "点" + bean.getLastRenewMinute() + "分 ,停止安排计划续期!");
                             logger.info("时间晚于" + bean.getLastRenewHour() + "点" + bean.getLastRenewMinute() + "分 ,停止安排计划续期!");
-
                             return SEAT_OK;
-
                         }
 
 

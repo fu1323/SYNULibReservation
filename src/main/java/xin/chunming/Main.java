@@ -9,8 +9,9 @@ import xin.chunming.bean.Bean;
 import java.io.*;
 import java.net.URISyntaxException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
+import java.util.Comparator;
 import java.util.function.Consumer;
 
 //TIP 要<b>运行</b>代码，请按 <shortcut actionId="Run"/> 或
@@ -62,7 +63,7 @@ public static Bean b = null;
                     ],
                        "autorenew": "false",
                        "stop_renew_hour": "16",
-                       "stop_renew_minute": "00"
+                       "stop_renew_minute": "00",
                        "fallback": "false"
                     }
                     """);
@@ -77,7 +78,7 @@ public static Bean b = null;
 //                System.out.println(line);
                 stringBuilder.append(line);
             }
-            if (stringBuilder.toString().contains("改成你自己的union_id")) {
+            if (stringBuilder.toString().contains("改成你自己的unionid")) {
                 System.out.println("配置文件不合法 请修改");
                 logger.info("配置文件不合法 请修改");
 
@@ -131,20 +132,20 @@ public static Bean b = null;
 
 
                         b = new Bean(seatsMaptmp, jsonNode.get("unionid").asText(),
-                                Boolean.parseBoolean(jsonNode.get("autorenew").asText()),
-                                Boolean.parseBoolean(jsonNode.get("fallback").asText()),0,
-                                Integer.parseInt(jsonNode.get("stop_renew_hour").asText()),
-                                Integer.parseInt(jsonNode.get("stop_renew_minute").asText()),null);
+                                jsonNode.path("autorenew").asBoolean(false),
+                                jsonNode.path("fallback").asBoolean(false), 0,
+                                jsonNode.path("stop_renew_hour").asInt(16),
+                                jsonNode.path("stop_renew_minute").asInt(0), null);
                         int token = Login.getToken(b, seatid, oldtime, oldjobid, trycount);
                         if (token==Login.OCCUPIED&&b.isFallback()){
                             System.out.println("座位续期被占,fallback尝试重新预约新座位!");
                                    logger.info("座位续期被占,fallback尝试重新预约新座位!");
-                            normalbooking(jsonNode);
+                            normalbooking(jsonNode, seatid);
                         }
                     }
                 }
                 if (!renew) {
-                    normalbooking(jsonNode);
+                    normalbooking(jsonNode, null);
                 }
 
 
@@ -152,28 +153,28 @@ public static Bean b = null;
         }
     }
 
-    private static void normalbooking(JsonNode jsonNode) throws IOException {
+    private static void normalbooking(JsonNode jsonNode, String excludedSeatId) throws IOException {
        // Bean b;
         b = new Bean(seatsMap, jsonNode.get("unionid").asText(),
-                Boolean.parseBoolean(jsonNode.get("autorenew").asText()),
-                Boolean.parseBoolean(jsonNode.get("fallback").asText()),0,
-                Integer.parseInt(jsonNode.get("stop_renew_hour").asText()),
-                Integer.parseInt(jsonNode.get("stop_renew_minute").asText()),null);
+                jsonNode.path("autorenew").asBoolean(false),
+                jsonNode.path("fallback").asBoolean(false), 0,
+                jsonNode.path("stop_renew_hour").asInt(16),
+                jsonNode.path("stop_renew_minute").asInt(0), null);
 
-        int a = seatsMap.size();
-        for (int i = 0; i < a; i++) {
-            if (seatsMap.get("id" + i) == null) {
-                a++;
+        List<Map.Entry<String, String>> orderedSeats = seatsMap.entrySet().stream()
+                .filter(entry -> entry.getKey().matches("id\\d+"))
+                .sorted(Comparator.comparingInt(entry -> Integer.parseInt(entry.getKey().substring(2))))
+                .toList();
+        for (Map.Entry<String, String> entry : orderedSeats) {
+            String seatId = entry.getValue();
+            if (seatId.isBlank() || seatId.equals(excludedSeatId)) {
                 continue;
             }
-            if (seatsMap.get("id" + i).isBlank() || seatsMap.get("id" + i).isEmpty()) {
-                continue;
+            int code = Login.getToken(b, seatId, null, oldjobid, "0");
+            if (code == Login.LIBRARY_OR_USER_UNAVAILABLE || code == Login.SEAT_OK) {
+                break;
             }
-           int code = Login.getToken(b, seatsMap.get("id" + i), null, oldjobid, String.valueOf(0));
-           if (code == Login.LIBRARY_OR_USER_UNAVAILABLE || code == Login.SEAT_OK) {
-               break;
-           }
-            System.out.println(seatsMap.get("id" + i));
+            System.out.println(seatId);
         }
     }
 

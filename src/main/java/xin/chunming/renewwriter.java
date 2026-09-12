@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.time.LocalDateTime;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -13,15 +12,12 @@ public class renewwriter {
     private static final Logger logger = LoggerFactory.getLogger(renewwriter.class);
 
     public static void configWriter(String renewjsonpath, String miniute, String seatid, String jarpath, String oldjobid, String oldtime,boolean weishifang,int weishifangcount,boolean fallback) throws IOException, InterruptedException {
-        LocalDateTime now = LocalDateTime.now();
         String jobid = null;
         if (!(oldjobid == null || oldjobid.equals(""))) {
 
 
             System.out.println(miniute);
             System.out.println("oldjobid: " + oldjobid);
-
-            LocalDateTime localDateTime = now.plusMinutes(Integer.parseInt(miniute));
 
             ProcessBuilder processatq = new ProcessBuilder("atq");
             processatq.redirectErrorStream(true); // 合并错误流到标准输
@@ -56,24 +52,19 @@ public class renewwriter {
         System.out.println("尝试创建续期配置");
         logger.info("尝试创建续期配置");
         File parentFile = new File(jarpath).getParentFile();
-       // ProcessBuilder processBuilder = new ProcessBuilder("at", "now", "+" + String.valueOf(Integer.parseInt(miniute) + 3), "minutes",">>",parentFile+File.separator+"atlog.log","2>&1");
-        String command = "echo \"/usr/bin/java -jar " + jarpath + " renew >> " + parentFile + File.separator + "atlog.log 2>&1\" | at now + " + (Integer.parseInt(miniute) + 3) + " minutes";
-        System.out.println(command);
-        ProcessBuilder processBuilder = new ProcessBuilder("sh","-c",command);
+        int delayMinutes = Integer.parseInt(miniute) + 3;
+        String javaExecutable = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
+        String scheduledCommand = shellQuote(javaExecutable) + " -jar " + shellQuote(jarpath)
+                + " renew >> " + shellQuote(new File(parentFile, "atlog.log").getPath()) + " 2>&1";
+        System.out.println("将在 " + delayMinutes + " 分钟后执行续期任务");
+        ProcessBuilder processBuilder = new ProcessBuilder("at", "now", "+", String.valueOf(delayMinutes), "minutes");
         processBuilder.redirectErrorStream(true); // 合并错误流到标准输出
 
         Process p = processBuilder.start();
-//        try (OutputStream os = p.getOutputStream()) {
-
-//        try (OutputStream os = p.getOutputStream();
-//             PrintWriter writer = new PrintWriter(os)) {
-//            String command = "java -jar " + jarpath + " renew";
-//            writer.println(command);
-//            writer.flush();
-//            // try-with-resources 会自动关闭 os，向 at 发送 EOF
-//        }
-
-
+        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(p.getOutputStream()))) {
+            writer.write(scheduledCommand);
+            writer.newLine();
+        }
         StringBuilder stringBuilder = new StringBuilder();
 // 获取输入流并读取
         try (BufferedReader reader = new BufferedReader(
@@ -84,16 +75,20 @@ public class renewwriter {
                 System.out.println(line);
             }
         }
+        int exitCode = p.waitFor();
+        if (exitCode != 0) {
+            throw new IOException("创建续期任务失败: " + stringBuilder);
+        }
+
         Pattern pattern = Pattern.compile("job\\s+(\\d+)");
         Matcher matcher = pattern.matcher(stringBuilder.toString());
-        String[] split = stringBuilder.toString().split(" at ");
-        String nexttime = split[split.length - 1];
+        String[] split = stringBuilder.toString().split(" at ", 2);
+        String nexttime = split.length == 2 ? split[1].trim() : "";
 
         if (matcher.find()) {
             jobid = matcher.group(1); // 输出: 5
         }
 
-        int exitCode = p.waitFor();
         BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(renewjsonpath + File.separator + "renew.json")));
 
         bufferedWriter.write("{\n" +
@@ -106,16 +101,16 @@ public class renewwriter {
 
         bufferedWriter.flush();
         bufferedWriter.close();
-        if (exitCode == 0) {
+        System.out.println("OK!");
+        logger.info("OK!");
 
-            System.out.println("OK!");
-            logger.info("OK!");
-        }
+    }
 
+    private static String shellQuote(String value) {
+        return "'" + value.replace("'", "'\\\"'\\\"'") + "'";
     }
 }
 // 方案1：最简单，去掉无效的日志重定向
 //String command = "echo \"/usr/bin/java -jar " + jarpath + " renew\" | at now + " + (Integer.parseInt(miniute) + 3) + " minutes";
 
 // 方案2：让 at 任务本身记录日志
-
