@@ -11,12 +11,12 @@ public class renewwriter {
 
     private static final Logger logger = LoggerFactory.getLogger(renewwriter.class);
 
-    public static void configWriter(String renewjsonpath, String miniute, String seatid, String jarpath, String oldjobid, String oldtime,boolean weishifang,int weishifangcount,boolean fallback) throws IOException, InterruptedException {
+    public static void configWriter(String renewjsonpath, String time, String seatid, String jarpath, String oldjobid, String oldtime,boolean weishifang,int weishifangcount,boolean fallback) throws IOException, InterruptedException {
         String jobid = null;
         if (!(oldjobid == null || oldjobid.equals(""))) {
 
 
-            System.out.println(miniute);
+            System.out.println(time);
             System.out.println("oldjobid: " + oldjobid);
 
             ProcessBuilder processatq = new ProcessBuilder("atq");
@@ -52,12 +52,13 @@ public class renewwriter {
         System.out.println("尝试创建续期配置");
         logger.info("尝试创建续期配置");
         File parentFile = new File(jarpath).getParentFile();
-        int delayMinutes = Integer.parseInt(miniute) + 3;
+      //  int delayMinutes = Integer.parseInt(miniute) + 3;
         String javaExecutable = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
         String scheduledCommand = shellQuote(javaExecutable) + " -jar " + shellQuote(jarpath)
                 + " renew >> " + shellQuote(new File(parentFile, "atlog.log").getPath()) + " 2>&1";
-        System.out.println("将在 " + delayMinutes + " 分钟后执行续期任务");
-        ProcessBuilder processBuilder = new ProcessBuilder("at", "now", "+", String.valueOf(delayMinutes), "minutes");
+        System.out.println("将在 " + time+ " 后执行续期任务");
+      //  ProcessBuilder processBuilder = new ProcessBuilder("at", "now", "+", String.valueOf(delayMinutes), "minutes");
+        ProcessBuilder processBuilder = new ProcessBuilder("at", time);
         processBuilder.redirectErrorStream(true); // 合并错误流到标准输出
 
         Process p = processBuilder.start();

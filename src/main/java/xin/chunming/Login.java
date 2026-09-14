@@ -14,17 +14,16 @@ import java.io.IOException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.ZoneId;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Login {
-    /** 图书馆服务端时间为中国标准时间，不能依赖运行机器的默认时区。 */
+    /**
+     * 图书馆服务端时间为中国标准时间，不能依赖运行机器的默认时区。
+     */
     private static final ZoneId LIBRARY_ZONE = ZoneId.of("Asia/Shanghai");
 
     private static OkHttpClient client() {
@@ -152,7 +151,9 @@ public class Login {
                 if (code.equals("1")) {
                     System.out.println("错误: getToken" + message);
                     logger.info("错误: getToken" + message);
-                    if (message.contains("设备在该时间段内已被预约")){return OCCUPIED;}
+                    if (message.contains("设备在该时间段内已被预约")) {
+                        return OCCUPIED;
+                    }
                     if (message.contains("设备不在开放时间") || message.contains("即将闭馆") || message.contains("您预约的不是当前设备") || (message.contains("请去") && message.contains("处扫描二维码"))) {
                         return LIBRARY_OR_USER_UNAVAILABLE;
                     } else return SEAT_ERROR;
@@ -182,7 +183,7 @@ public class Login {
                                     .isBefore(LocalTime.of(bean.getLastRenewHour(), bean.getLastRenewMinute()));
 
                             if (before) {
-                                renewwriter.configWriter(path, String.valueOf(durationMinute), seatid, jarPath, jobid, oldtime, false, Integer.parseInt(trycount),bean.isFallback());
+                                renewwriter.configWriter(path, String.valueOf(durationMinute), seatid, jarPath, jobid, oldtime, false, Integer.parseInt(trycount), bean.isFallback());
 
                             } else {
                                 System.out.println("时间晚于" + bean.getLastRenewHour() + "点" + bean.getLastRenewMinute() + "分 ,停止安排计划续期!");
@@ -233,7 +234,7 @@ public class Login {
                                     } else {
                                         System.out.println("五分钟后再试!");
                                         logger.info("五分钟后再试!");
-                                        renewwriter.configWriter(path, String.valueOf(5), seatid, jarPath, jobid, oldtime, true, Integer.parseInt(trycount),bean.isFallback());
+                                        renewwriter.configWriter(path, String.valueOf(5), seatid, jarPath, jobid, oldtime, true, Integer.parseInt(trycount), bean.isFallback());
                                     }
                                     return SEAT_ERROR;
                                 }
@@ -292,7 +293,9 @@ public class Login {
                 if (code.equals("1")) {
                     System.out.println("错误: /phoneSeatReserve/duration " + message);
                     logger.info("错误: /phoneSeatReserve/duration " + message);
-                    if (message.contains("设备在该时间段内已被预约")){return OCCUPIED;}
+                    if (message.contains("设备在该时间段内已被预约")) {
+                        return OCCUPIED;
+                    }
 
                     if (message.contains("设备不在开放时间") || message.contains("即将闭馆") || message.contains("您预约的不是当前设备") || (message.contains("请去") && message.contains("处扫描二维码"))) {
                         return LIBRARY_OR_USER_UNAVAILABLE;
@@ -305,7 +308,7 @@ public class Login {
                 if (code.equals("0") && jsonNode.get("data") != null) {
                     String maxMiniute = jsonNode.get("data").get("max").asText();
 
-                  //  maxMiniute=String.valueOf(Integer.parseInt(maxMiniute)+30);
+                    //  maxMiniute=String.valueOf(Integer.parseInt(maxMiniute)+30);
 
                     if (Integer.parseInt(maxMiniute) < 300) {
                         if (LocalDateTime.now(LIBRARY_ZONE).getHour() > 16) {//16点之后 maxMinute<300正常
@@ -369,7 +372,9 @@ public class Login {
                 if (code.equals("1")) {
                     System.out.println("错误: phoneSeatReserve/duration " + message);
                     logger.info("错误: phoneSeatReserve/duration " + message);
-                    if (message.contains("设备在该时间段内已被预约")){return OCCUPIED;}
+                    if (message.contains("设备在该时间段内已被预约")) {
+                        return OCCUPIED;
+                    }
 
                     return SEAT_ERROR;
 
@@ -380,7 +385,11 @@ public class Login {
                         System.out.println("订座/续订 操作成功!");
                         logger.info("订座/续订 操作成功!");
 
+                        String nextStartTime = jsonNode.get("data").asText();
+                        Instant instant = Instant.ofEpochMilli(Long.parseLong(nextStartTime) +3 * 60 * 1000);//3分钟之后续期
+                        ZonedDateTime zdt = instant.atZone(ZoneId.systemDefault());
 
+                        String format = zdt.format(DateTimeFormatter.ofPattern("HH:mm"));
                         before = LocalTime.now(LIBRARY_ZONE)
                                 .isBefore(LocalTime.of(bean.getLastRenewHour(), bean.getLastRenewMinute()));
 
@@ -391,7 +400,7 @@ public class Login {
                             return SEAT_OK;
                         }
                         if (before) {//本次续期/订座 只有小于设定截止时间才可配置自动续期
-                            renewwriter.configWriter(path, String.valueOf(times), seatid, jarPath, jobid, oldtime, false, Integer.parseInt(trycount),bean.isFallback());
+                            renewwriter.configWriter(path, format, seatid, jarPath, jobid, oldtime, false, Integer.parseInt(trycount), bean.isFallback());
                             return SEAT_OK;
                         } else {
                             System.out.println("时间晚于" + bean.getLastRenewHour() + "点" + bean.getLastRenewMinute() + "分 ,停止安排计划续期!");
