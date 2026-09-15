@@ -17,12 +17,17 @@ import java.util.function.Consumer;
 //TIP 要<b>运行</b>代码，请按 <shortcut actionId="Run"/> 或
 // 点击装订区域中的 <icon src="AllIcons.Actions.Execute"/> 图标。
 public class Main {
+
+    public static final int RereserveNeed = 0;
+    public static final int RereserveNoNeed = 1;
+
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
     private static String oldjobid;
     private static HashMap<String, String> seatsMap = new HashMap<>();
 
-public static Bean b = null;
-    public static void main(String[] args) throws URISyntaxException, IOException {
+    public static Bean b = null;
+
+    public static void main(String[] args) throws URISyntaxException, IOException, InterruptedException {
 
 
         String appPath = PathUtil.getAppPath();
@@ -40,6 +45,9 @@ public static Bean b = null;
         Login.setPath(jarDir);
 
         System.out.println("+++++++座位自动预约系统 for SYNU+++++++");
+
+        String s1 = DelayTryCount.readinCount();
+
         boolean renew = false;
         for (String arg : args) {
             if (arg.equals("renew")) {
@@ -95,7 +103,7 @@ public static Bean b = null;
                         public void accept(Map.Entry<String, JsonNode> stringJsonNodeEntry) {
 
                             if (!stringJsonNodeEntry.getKey().equalsIgnoreCase("comment")) {
-                                seatsMap.put(stringJsonNodeEntry.getKey(), String.valueOf(stringJsonNodeEntry.getValue()).replaceAll("\"",""));
+                                seatsMap.put(stringJsonNodeEntry.getKey(), String.valueOf(stringJsonNodeEntry.getValue()).replaceAll("\"", ""));
                             }
                         }
                     });
@@ -137,15 +145,20 @@ public static Bean b = null;
                                 jsonNode.path("stop_renew_hour").asInt(16),
                                 jsonNode.path("stop_renew_minute").asInt(0), null);
                         int token = Login.getToken(b, seatid, oldtime, oldjobid, trycount);
-                        if ((token==Login.OCCUPIED||token==Login.SEAT_ERROR)&&b.isFallback()){
+                        if ((token == Login.OCCUPIED || token == Login.SEAT_ERROR) && b.isFallback()) {
                             System.out.println("座位续期被占,fallback尝试重新预约新座位!");
-                                   logger.info("座位续期被占,fallback尝试重新预约新座位!");
-                            normalbooking(jsonNode, seatid);
+                            logger.info("座位续期被占,fallback尝试重新预约新座位!");
+                           if (normalbooking(jsonNode, seatid)==RereserveNeed){
+                               delaytry(s1, path);
+
+                           }else DelayTryCount.writeout(0);
                         }
                     }
                 }
                 if (!renew) {
-                    normalbooking(jsonNode, null);
+                    if (normalbooking(jsonNode, null) == RereserveNeed) {
+                        delaytry(s1, path);
+                    }else DelayTryCount.writeout(0);
                 }
 
 
@@ -153,8 +166,54 @@ public static Bean b = null;
         }
     }
 
-    private static void normalbooking(JsonNode jsonNode, String excludedSeatId) throws IOException {
-       // Bean b;
+    private static void delaytry(String s1, String jarPath) throws IOException, InterruptedException {
+        int previousCount = s1 == null ? 0 : Integer.parseInt(s1);
+        int retryCount = previousCount + 1;
+        DelayTryCount.writeout(retryCount);
+        if (retryCount <= 3) {
+            DelayTryCount.outAndLog("重试:第" + retryCount + "次");
+            String jarpath = jarPath;
+            File parentFile = new File(jarpath).getParentFile();
+            //  int delayMinutes = Integer.parseInt(miniute) + 3;
+            String javaExecutable = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
+
+
+            String scheduledCommand = shellQuote(javaExecutable) + " -jar " + shellQuote(jarpath)
+                    + "  >> " + shellQuote(new File(parentFile, "atdelaylog.log").getPath()) + " 2>&1";
+
+            ProcessBuilder processBuilder = new ProcessBuilder("at", "now", "+", String.valueOf(15), "minutes");
+            // ProcessBuilder processBuilder = new ProcessBuilder("at", time);
+            processBuilder.redirectErrorStream(true); // 合并错误流到标准输出
+
+            Process p = processBuilder.start();
+            try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(p.getOutputStream()))) {
+                writer.write(scheduledCommand);
+                writer.newLine();
+            }
+            StringBuilder stringBuilde = new StringBuilder();
+// 获取输入流并读取
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
+                String line2;
+                while ((line2 = reader.readLine()) != null) {
+                    stringBuilde.append(line2);
+                    System.out.println(line2);
+                }
+            }
+            int exitCode = p.waitFor();
+            if (exitCode != 0) {
+                throw new IOException("创建续期任务失败: " + stringBuilde);
+            }
+
+
+        }else DelayTryCount.outAndLog("重试超过三次,停止");
+    }
+
+    private static String shellQuote(String value) {
+        return "'" + value.replace("'", "'\\\"'\\\"'") + "'";
+    }
+
+    private static int normalbooking(JsonNode jsonNode, String excludedSeatId) throws IOException {
+        // Bean b;
         b = new Bean(seatsMap, jsonNode.get("unionid").asText(),
                 jsonNode.path("autorenew").asBoolean(false),
                 jsonNode.path("fallback").asBoolean(false), 0,
@@ -165,17 +224,20 @@ public static Bean b = null;
                 .filter(entry -> entry.getKey().matches("id\\d+"))
                 .sorted(Comparator.comparingInt(entry -> Integer.parseInt(entry.getKey().substring(2))))
                 .toList();
+        int code = 0;
         for (Map.Entry<String, String> entry : orderedSeats) {
             String seatId = entry.getValue();
             if (seatId.isBlank() || seatId.equals(excludedSeatId)) {
                 continue;
             }
-            int code = Login.getToken(b, seatId, null, oldjobid, "0");
+            code = Login.getToken(b, seatId, null, oldjobid, "0");
             if (code == Login.LIBRARY_OR_USER_UNAVAILABLE || code == Login.SEAT_OK) {
-                break;
+                return RereserveNoNeed;
+                //  break;
             }
             System.out.println(seatId);
         }
+        return RereserveNeed;
     }
 
 //    public static ArrayList<String> jsnode2arrlist(String jsnd) {

@@ -148,6 +148,7 @@ public class Login {
                 JsonNode jsonNode = objectMapper.readTree(s);
                 String code = jsonNode.get("code").asText();
                 String message = jsonNode.get("message").asText();
+                System.out.println(message);
                 if (code.equals("1")) {
                     System.out.println("错误: getToken" + message);
                     logger.info("错误: getToken" + message);
@@ -388,7 +389,7 @@ public class Login {
 
                         String nextStartTime = jsonNode.get("data").asText();
                         Instant instant = Instant.ofEpochMilli(Long.parseLong(nextStartTime) +3 * 60 * 1000);//3分钟之后续期
-                        ZonedDateTime zdt = instant.atZone(ZoneId.systemDefault());
+                        ZonedDateTime zdt = instant.atZone(LIBRARY_ZONE);
 
                         String format = zdt.format(DateTimeFormatter.ofPattern("HH:mm"));
                         before = LocalTime.now(LIBRARY_ZONE)
@@ -433,5 +434,6 @@ public class Login {
         }
 
     }
+
 
 }
