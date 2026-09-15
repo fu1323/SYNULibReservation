@@ -137,7 +137,7 @@ public static Bean b = null;
                                 jsonNode.path("stop_renew_hour").asInt(16),
                                 jsonNode.path("stop_renew_minute").asInt(0), null);
                         int token = Login.getToken(b, seatid, oldtime, oldjobid, trycount);
-                        if (token==Login.OCCUPIED&&b.isFallback()){
+                        if ((token==Login.OCCUPIED||token==Login.SEAT_ERROR)&&b.isFallback()){
                             System.out.println("座位续期被占,fallback尝试重新预约新座位!");
                                    logger.info("座位续期被占,fallback尝试重新预约新座位!");
                             normalbooking(jsonNode, seatid);

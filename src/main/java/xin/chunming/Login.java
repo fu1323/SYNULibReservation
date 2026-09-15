@@ -174,6 +174,7 @@ public class Login {
                             int durationMinute;
                             try {
                                 durationMinute = remainingMinutes(duration);
+
                             } catch (IllegalArgumentException e) {
                                 System.out.println(e.getMessage() + "，不创建续期任务。");
                                 logger.warn(e.getMessage() + "，不创建续期任务。");
@@ -183,7 +184,7 @@ public class Login {
                                     .isBefore(LocalTime.of(bean.getLastRenewHour(), bean.getLastRenewMinute()));
 
                             if (before) {
-                                renewwriter.configWriter(path, String.valueOf(durationMinute), seatid, jarPath, jobid, oldtime, false, Integer.parseInt(trycount), bean.isFallback());
+                                renewwriter.configWriter(true,path, String.valueOf(durationMinute), seatid, jarPath, jobid, oldtime, false, Integer.parseInt(trycount), bean.isFallback());
 
                             } else {
                                 System.out.println("时间晚于" + bean.getLastRenewHour() + "点" + bean.getLastRenewMinute() + "分 ,停止安排计划续期!");
@@ -234,7 +235,7 @@ public class Login {
                                     } else {
                                         System.out.println("五分钟后再试!");
                                         logger.info("五分钟后再试!");
-                                        renewwriter.configWriter(path, String.valueOf(5), seatid, jarPath, jobid, oldtime, true, Integer.parseInt(trycount), bean.isFallback());
+                                        renewwriter.configWriter(true,path, String.valueOf(5), seatid, jarPath, jobid, oldtime, true, Integer.parseInt(trycount), bean.isFallback());
                                     }
                                     return SEAT_ERROR;
                                 }
@@ -400,7 +401,7 @@ public class Login {
                             return SEAT_OK;
                         }
                         if (before) {//本次续期/订座 只有小于设定截止时间才可配置自动续期
-                            renewwriter.configWriter(path, format, seatid, jarPath, jobid, oldtime, false, Integer.parseInt(trycount), bean.isFallback());
+                            renewwriter.configWriter(false,path, format, seatid, jarPath, jobid, oldtime, false, Integer.parseInt(trycount), bean.isFallback());
                             return SEAT_OK;
                         } else {
                             System.out.println("时间晚于" + bean.getLastRenewHour() + "点" + bean.getLastRenewMinute() + "分 ,停止安排计划续期!");

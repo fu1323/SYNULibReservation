@@ -10,8 +10,8 @@ import java.util.regex.Pattern;
 public class renewwriter {
 
     private static final Logger logger = LoggerFactory.getLogger(renewwriter.class);
-
-    public static void configWriter(String renewjsonpath, String time, String seatid, String jarpath, String oldjobid, String oldtime,boolean weishifang,int weishifangcount,boolean fallback) throws IOException, InterruptedException {
+//首次预约 使用server返回时间戳 传true  check、renew 使用相对时间 传false
+    public static void configWriter(boolean selfNotRelease,String renewjsonpath, String time, String seatid, String jarpath, String oldjobid, String oldtime,boolean weishifang,int weishifangcount,boolean fallback) throws IOException, InterruptedException {
         String jobid = null;
         if (!(oldjobid == null || oldjobid.equals(""))) {
 
@@ -57,8 +57,8 @@ public class renewwriter {
         String scheduledCommand = shellQuote(javaExecutable) + " -jar " + shellQuote(jarpath)
                 + " renew >> " + shellQuote(new File(parentFile, "atlog.log").getPath()) + " 2>&1";
         System.out.println("将在 " + time+ " 后执行续期任务");
-      //  ProcessBuilder processBuilder = new ProcessBuilder("at", "now", "+", String.valueOf(delayMinutes), "minutes");
-        ProcessBuilder processBuilder = new ProcessBuilder("at", time);
+        ProcessBuilder processBuilder =selfNotRelease? new ProcessBuilder("at", "now", "+", time, "minutes"):new ProcessBuilder("at", time);
+       // ProcessBuilder processBuilder = new ProcessBuilder("at", time);
         processBuilder.redirectErrorStream(true); // 合并错误流到标准输出
 
         Process p = processBuilder.start();
@@ -97,7 +97,7 @@ public class renewwriter {
                 "  \"datetime\": \"" + nexttime + "\",\n" +
                 "  \"seatid\": \"" + seatid + "\",\n" +
                 "  \"jobid\": \"" + (jobid == null ? "" : jobid) + "\",\n" +
-                "\"trycount\": \""+ String.valueOf(weishifang?++weishifangcount:0) + "\"\n"+
+                "\"trycount\": \""+ java.lang.String.valueOf(weishifang?++weishifangcount:0) + "\"\n"+
                 "}");
 
         bufferedWriter.flush();
