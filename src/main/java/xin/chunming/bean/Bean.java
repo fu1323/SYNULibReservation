@@ -1,7 +1,10 @@
 package xin.chunming.bean;
 
-import java.util.HashMap;
+import lombok.Getter;
+import lombok.Setter;
 
+import java.util.HashMap;
+@Getter@Setter
 public class Bean {
     private HashMap<String,String> seatId;
     private String unionId;
@@ -10,75 +13,6 @@ public class Bean {
     private int miniute;
     private int lastRenewHour;
     private int lastRenewMinute;
-
-
-    public int getMiniute() {
-        return miniute;
-    }
-
-    public void setMiniute(int miniute) {
-        this.miniute = miniute;
-    }
-
-
-
-    public String getUnionId() {
-        return unionId;
-    }
-
-    public void setUnionId(String unionId) {
-        this.unionId = unionId;
-    }
-
-    public String getToken() {
-        return token;
-    }
-
-    public void setToken(String token) {
-        this.token = token;
-    }
-
-    public boolean isRenew() {
-        return renew;
-    }
-
-    public int getLastRenewHour() {
-        return lastRenewHour;
-    }
-
-    public boolean isFallback() {
-        return fallback;
-    }
-
-    public void setFallback(boolean fallback) {
-        this.fallback = fallback;
-    }
-
-
-
-    public void setLastRenewHour(int lastRenewHour) {
-        this.lastRenewHour = lastRenewHour;
-    }
-
-    public int getLastRenewMinute() {
-        return lastRenewMinute;
-    }
-
-    public void setLastRenewMinute(int lastRenewMinute) {
-        this.lastRenewMinute = lastRenewMinute;
-    }
-
-    public void setRenew(boolean renew) {
-        this.renew = renew;
-    }
-
-    public HashMap<String, String> getSeatId() {
-        return seatId;
-    }
-
-    public void setSeatId(HashMap<String, String> seatId) {
-        this.seatId = seatId;
-    }
 
     public Bean() {
     }

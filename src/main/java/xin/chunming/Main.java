@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import xin.chunming.bean.Bean;
+import xin.chunming.bean.AllFail;
 
 import java.io.*;
 import java.net.URISyntaxException;
@@ -26,6 +27,7 @@ public class Main {
     private static HashMap<String, String> seatsMap = new HashMap<>();
 
     public static Bean b = null;
+    public static AllFail allfail = null;
 
     public static void main(String[] args) throws URISyntaxException, IOException, InterruptedException {
 
@@ -72,7 +74,12 @@ public class Main {
                        "autorenew": "false",
                        "stop_renew_hour": "16",
                        "stop_renew_minute": "00",
-                       "fallback": "false"
+                       "fallback": "false",
+                       "allfail": {
+                           "fallback": "false(所有作为座位都失败时的重试,改成true启用)",
+                           "delayminute": "15(两次重试的间隔 分钟)",
+                           "maxtrycount": "3(最多重试次数)"
+                         }
                     }
                     """);
             bufferedWriter.flush();
@@ -93,6 +100,11 @@ public class Main {
             } else {
                 ObjectMapper objectMapper = new ObjectMapper();
                 JsonNode jsonNode = objectMapper.readTree(stringBuilder.toString());
+
+                JsonNode jsonNode1 = jsonNode.get("allfail");
+                allfail = new AllFail(jsonNode1.get("fallback").asText(), jsonNode1.get("delayminute").asText(), jsonNode1.get("maxtrycount").asText());
+
+
                 int seatid1 = jsonNode.get("seatid").size();
                 System.out.println(seatid1 + "个座位");
                 logger.info(seatid1 + "个座位");
@@ -148,17 +160,22 @@ public class Main {
                         if ((token == Login.OCCUPIED || token == Login.SEAT_ERROR) && b.isFallback()) {
                             System.out.println("座位续期被占,fallback尝试重新预约新座位!");
                             logger.info("座位续期被占,fallback尝试重新预约新座位!");
-                           if (normalbooking(jsonNode, seatid)==RereserveNeed){
-                               delaytry(s1, path);
+                            if (normalbooking(jsonNode, seatid) == RereserveNeed) {
+                                if (Boolean.parseBoolean(allfail.getFallback())) {
+                                    delaytry(s1, path, allfail);
+                                }
 
-                           }else DelayTryCount.writeout(0);
+                            } else DelayTryCount.writeout(0);
                         }
                     }
                 }
                 if (!renew) {
                     if (normalbooking(jsonNode, null) == RereserveNeed) {
-                        delaytry(s1, path);
-                    }else DelayTryCount.writeout(0);
+                        if (Boolean.parseBoolean(allfail.getFallback())) {
+
+                            delaytry(s1, path, allfail);
+                        }
+                    } else DelayTryCount.writeout(0);
                 }
 
 
@@ -166,11 +183,11 @@ public class Main {
         }
     }
 
-    private static void delaytry(String s1, String jarPath) throws IOException, InterruptedException {
+    private static void delaytry(String s1, String jarPath, AllFail allfail) throws IOException, InterruptedException {
         int previousCount = s1 == null ? 0 : Integer.parseInt(s1);
         int retryCount = previousCount + 1;
         DelayTryCount.writeout(retryCount);
-        if (retryCount <= 3) {
+        if (retryCount <= Integer.parseInt(allfail.getMaxtrycount())) {
             DelayTryCount.outAndLog("重试:第" + retryCount + "次");
             String jarpath = jarPath;
             File parentFile = new File(jarpath).getParentFile();
@@ -181,15 +198,7 @@ public class Main {
             String scheduledCommand = shellQuote(javaExecutable) + " -jar " + shellQuote(jarpath)
                     + "  >> " + shellQuote(new File(parentFile, "atdelaylog.log").getPath()) + " 2>&1";
 
-            ProcessBuilder processBuilder = new ProcessBuilder("at", "now", "+", String.valueOf(15), "minutes");
-            // ProcessBuilder processBuilder = new ProcessBuilder("at", time);
-            processBuilder.redirectErrorStream(true); // 合并错误流到标准输出
-
-            Process p = processBuilder.start();
-            try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(p.getOutputStream()))) {
-                writer.write(scheduledCommand);
-                writer.newLine();
-            }
+            Process p = getProcess(allfail, scheduledCommand);
             StringBuilder stringBuilde = new StringBuilder();
 // 获取输入流并读取
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
@@ -205,7 +214,20 @@ public class Main {
             }
 
 
-        }else DelayTryCount.outAndLog("重试超过三次,停止");
+        } else DelayTryCount.outAndLog("重试超过三次,停止");
+    }
+
+    private static Process getProcess(AllFail allfail, String scheduledCommand) throws IOException {
+        ProcessBuilder processBuilder = new ProcessBuilder("at", "now", "+", allfail.getDelayminute(), "minutes");
+        // ProcessBuilder processBuilder = new ProcessBuilder("at", time);
+        processBuilder.redirectErrorStream(true); // 合并错误流到标准输出
+
+        Process p = processBuilder.start();
+        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(p.getOutputStream()))) {
+            writer.write(scheduledCommand);
+            writer.newLine();
+        }
+        return p;
     }
 
     private static String shellQuote(String value) {
