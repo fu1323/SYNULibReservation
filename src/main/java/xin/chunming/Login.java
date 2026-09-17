@@ -388,7 +388,7 @@ public class Login {
                         logger.info("订座/续订 操作成功!");
 
                         String nextStartTime = jsonNode.get("data").asText();
-                        Instant instant = Instant.ofEpochMilli(Long.parseLong(nextStartTime) +3 * 60 * 1000);//3分钟之后续期
+                        Instant instant = Instant.ofEpochMilli(Long.parseLong(nextStartTime) + (long) bean.getRenew_gap_minute() * 60 * 1000);//3分钟之后续期
                         ZonedDateTime zdt = instant.atZone(LIBRARY_ZONE);
 
                         String format = zdt.format(DateTimeFormatter.ofPattern("HH:mm"));

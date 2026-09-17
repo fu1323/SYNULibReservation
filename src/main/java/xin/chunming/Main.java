@@ -67,18 +67,19 @@ public class Main {
                     { "unionid":"改成你自己的unionid",
                     "seatid":[
                     
-                      {"id0(必须从0开始)": "改成座位id1","comment":"座位号(方便人类阅读)(如A-123)"},
-                      {"id1": "改成座位id1, 可灵活修改","comment":"4F A-123"},
-                      {"id2": "123123123(数量不限,id后的数字为优先级)","comment":"3F B-567"}
+                      {"id0": "","comment":"A-123"},
+                      {"id1": "","comment":"4F A-123"},
+                      {"id2": "","comment":"3F B-567"}
                     ],
                        "autorenew": "false",
+                       "renew_gap_minute":"3",
                        "stop_renew_hour": "16",
                        "stop_renew_minute": "00",
                        "fallback": "false",
                        "allfail": {
-                           "fallback": "false(所有作为座位都失败时的重试,改成true启用)",
-                           "delayminute": "15(两次重试的间隔 分钟)",
-                           "maxtrycount": "3(最多重试次数)"
+                           "fallback": "false",
+                           "delayminute": "15",
+                           "maxtrycount": "3"
                          }
                     }
                     """);
@@ -155,7 +156,9 @@ public class Main {
                                 jsonNode.path("autorenew").asBoolean(false),
                                 jsonNode.path("fallback").asBoolean(false), 0,
                                 jsonNode.path("stop_renew_hour").asInt(16),
-                                jsonNode.path("stop_renew_minute").asInt(0), null);
+                                jsonNode.path("stop_renew_minute").asInt(0), null,
+                                jsonNode.path("renew_gap_minute").asInt(0)
+                        );
                         int token = Login.getToken(b, seatid, oldtime, oldjobid, trycount);
                         if ((token == Login.OCCUPIED || token == Login.SEAT_ERROR) && b.isFallback()) {
                             System.out.println("座位续期被占,fallback尝试重新预约新座位!");
@@ -240,7 +243,10 @@ public class Main {
                 jsonNode.path("autorenew").asBoolean(false),
                 jsonNode.path("fallback").asBoolean(false), 0,
                 jsonNode.path("stop_renew_hour").asInt(16),
-                jsonNode.path("stop_renew_minute").asInt(0), null);
+                jsonNode.path("stop_renew_minute").asInt(0), null,
+                jsonNode.path("renew_gap_minute").asInt(0)
+
+        );
 
         List<Map.Entry<String, String>> orderedSeats = seatsMap.entrySet().stream()
                 .filter(entry -> entry.getKey().matches("id\\d+"))

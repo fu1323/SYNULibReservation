@@ -11,7 +11,9 @@ public class renewwriter {
 
     private static final Logger logger = LoggerFactory.getLogger(renewwriter.class);
 //首次预约 使用server返回时间戳 传true  check、renew 使用相对时间 传false
-    public static void configWriter(boolean selfNotRelease,String renewjsonpath, String time, String seatid, String jarpath, String oldjobid, String oldtime,boolean weishifang,int weishifangcount,boolean fallback) throws IOException, InterruptedException {
+    public static void configWriter(boolean selfNotRelease,String renewjsonpath, String time, String seatid, String jarpath, String oldjobid,
+                                    String oldtime,boolean weishifang,
+                                    int weishifangcount,boolean fallback) throws IOException, InterruptedException {
         String jobid = null;
         if (!(oldjobid == null || oldjobid.equals(""))) {
 
