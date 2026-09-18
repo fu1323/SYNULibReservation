@@ -88,7 +88,7 @@ public class Login {
     public static final int OCCUPIED = 3;
     public static final int SEAT_OK = 0;
     private static final Pattern REMAINING_TIME_PART = Pattern.compile("(\\d+)\\s*(时|分|秒)");
-
+//返回分钟数 -1表示服务端返回的是0秒
     static int remainingMinutes(String duration) {
         int seconds = 0;
         boolean found = false;
@@ -103,8 +103,12 @@ public class Login {
                 default -> throw new IllegalStateException("Unexpected time unit");
             }
         }
-        if (!found || seconds <= 0) {
+        if (!found || seconds < 0) {
             throw new IllegalArgumentException("无法解析剩余时间: " + duration);
+        }
+        if (seconds==0){
+            System.out.println("server 返回剩余0秒,延迟再试!");
+            return -1;
         }
         return (seconds + 59) / 60;
     }
@@ -214,30 +218,7 @@ public class Login {
                             // 预约记录存在，但是还没有完全释放
                             // =========================
 
-                            System.out.println(
-                                    "预约未完全释放，5分钟后自动重试!"
-                            );
-                            logger.info(
-                                    "预约未完全释放，5分钟后自动重试!"
-                            );
-
-                            if (Integer.parseInt(trycount) > 2) {
-                                System.out.println("重试超过三次,停止!");
-                                logger.info("重试超过三次,停止!");
-                            } else {
-                                renewwriter.configWriter(
-                                        true,
-                                        path,
-                                        "5",
-                                        seatid,
-                                        jarPath,
-                                        jobid,
-                                        oldtime,
-                                        true,
-                                        Integer.parseInt(trycount),
-                                        bean.isFallback()
-                                );
-                            }
+                            notReleasedFully(bean, seatid, oldtime, jobid, trycount);
 
                             return SEAT_ERROR;
 
@@ -257,6 +238,10 @@ public class Login {
 
                             try {
                                 durationMinute = remainingMinutes(duration);
+                                if (durationMinute==-1){
+                                    notReleasedFully(bean,seatid,oldtime,jobid,trycount);
+                                    return LIBRARY_OR_USER_UNAVAILABLE;
+                                }
                             } catch (IllegalArgumentException e) {
                                 System.out.println(e.getMessage() + "，不创建续期任务。");
                                 logger.warn(e.getMessage() + "，不创建续期任务。");
@@ -406,6 +391,33 @@ public class Login {
             throw new RuntimeException(e);
         }
 
+    }
+
+    private static void notReleasedFully(Bean bean, String seatid, String oldtime, String jobid, String trycount) throws IOException, InterruptedException {
+        System.out.println(
+                "预约未完全释放，5分钟后自动重试!"
+        );
+        logger.info(
+                "预约未完全释放，5分钟后自动重试!"
+        );
+
+        if (Integer.parseInt(trycount) > 2) {
+            System.out.println("重试超过三次,停止!");
+            logger.info("重试超过三次,停止!");
+        } else {
+            renewwriter.configWriter(
+                    true,
+                    path,
+                    "5",
+                    seatid,
+                    jarPath,
+                    jobid,
+                    oldtime,
+                    true,
+                    Integer.parseInt(trycount),
+                    bean.isFallback()
+            );
+        }
     }
 
 
