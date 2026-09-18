@@ -165,88 +165,231 @@ public class Login {
                     System.out.println("服务器返回当前token: " + token);
                     logger.info("服务器返回当前token: " + token);
                     //可预约:reserveInfo!=null(自己使用,同时)
+                    JsonNode data = jsonNode.path("data");
+                    JsonNode reserveInfo = data.path("reserveInfo");
 
-                    if (!jsonNode.path("data").path("duration").isMissingNode()) {
+                    if (reserveInfo.isNull()) {
 
-                        System.out.println("预约未结束 还剩" + jsonNode.get("data").get("duration"));
-                        logger.info("预约未结束 还剩" + jsonNode.get("data").get("duration"));
-                        if (bean.isRenew()) {
-                            String duration = jsonNode.get("data").get("duration").asText();
+                        // =========================
+                        // ① reserveInfo == null
+                        // 座位当前没有预约，可以尝试预约
+                        // =========================
+
+                        JsonNode devInfo = data.path("devInfo");
+
+                        if (devInfo.isArray() && !devInfo.isEmpty()) {
+
+                            JsonNode devName = devInfo.path(0).path("devName");
+
+                            if (!devName.isMissingNode() && !devName.isNull()) {
+                                System.out.println("尝试座位: " + devName.asText());
+                                logger.info("尝试座位: " + devName.asText());
+
+                                return reservationCheck(
+                                        bean,
+                                        seatid,
+                                        iccookie[0],
+                                        jobid,
+                                        oldtime,
+                                        trycount
+                                );
+                            }
+                        }
+
+                        return SEAT_ERROR;
+
+                    } else {
+
+                        // =========================
+                        // ② reserveInfo != null
+                        // 说明存在预约记录
+                        // =========================
+
+                        JsonNode durationNode = data.path("duration");
+
+                        if (durationNode.isNull() || durationNode.isMissingNode()) {
+
+                            // =========================
+                            // ②-1 duration == null
+                            // 预约记录存在，但是还没有完全释放
+                            // =========================
+
+                            System.out.println(
+                                    "预约未完全释放，5分钟后自动重试!"
+                            );
+                            logger.info(
+                                    "预约未完全释放，5分钟后自动重试!"
+                            );
+
+                            if (Integer.parseInt(trycount) > 2) {
+                                System.out.println("重试超过三次,停止!");
+                                logger.info("重试超过三次,停止!");
+                            } else {
+                                renewwriter.configWriter(
+                                        true,
+                                        path,
+                                        "5",
+                                        seatid,
+                                        jarPath,
+                                        jobid,
+                                        oldtime,
+                                        true,
+                                        Integer.parseInt(trycount),
+                                        bean.isFallback()
+                                );
+                            }
+
+                            return SEAT_ERROR;
+
+                        } else {
+
+                            // =========================
+                            // ③ duration 有值
+                            // 自己已经有预约
+                            // =========================
+
+                            String duration = durationNode.asText();
+
+                            System.out.println("预约未结束 还剩\"" + duration + "\"");
+                            logger.info("预约未结束 还剩\"" + duration + "\"");
+
                             int durationMinute;
+
                             try {
                                 durationMinute = remainingMinutes(duration);
-
                             } catch (IllegalArgumentException e) {
                                 System.out.println(e.getMessage() + "，不创建续期任务。");
                                 logger.warn(e.getMessage() + "，不创建续期任务。");
                                 return SEAT_ERROR;
                             }
-                            before = LocalTime.now(LIBRARY_ZONE)
-                                    .isBefore(LocalTime.of(bean.getLastRenewHour(), bean.getLastRenewMinute()));
 
-                            if (before) {
-                                renewwriter.configWriter(true,path, String.valueOf(durationMinute), seatid, jarPath, jobid, oldtime, false, Integer.parseInt(trycount), bean.isFallback());
+                            if (bean.isRenew()) {
 
-                            } else {
-                                System.out.println("时间晚于" + bean.getLastRenewHour() + "点" + bean.getLastRenewMinute() + "分 ,停止安排计划续期!");
-                                logger.info("时间晚于" + bean.getLastRenewHour() + "点" + bean.getLastRenewMinute() + "分 ,停止安排计划续期!");
+                                before = LocalTime.now(LIBRARY_ZONE)
+                                        .isBefore(LocalTime.of(
+                                                bean.getLastRenewHour(),
+                                                bean.getLastRenewMinute()
+                                        ));
 
-
-                            }
-
-
-                        }
-                        return LIBRARY_OR_USER_UNAVAILABLE;
-                    } else {
-                        JsonNode jsonNode1 = jsonNode.get("data").get("devInfo").get(0).get("devName");
-                        if (jsonNode1 != null) {
-                            System.out.println("尝试座位: " + jsonNode1.asText());
-                            logger.info("尝试座位: " + jsonNode1.asText());
-                            return reservationCheck(bean, seatid, iccookie[0], jobid, oldtime, trycount);
-
-                        } else {
-                            JsonNode jsonNode2 = jsonNode.get("data").get("reserveInfo");
-                            if (jsonNode1 == null && jsonNode2 != null) {
-                                JsonNode startTime = jsonNode2.get("resvBeginTime");
-                                if (startTime != null) {
-                                    String start = startTime.asText();
-                                    String end = jsonNode2.get("resvEndOperationTime").asText();
-                                    LocalDateTime startldt = Instant.ofEpochMilli(Long.parseLong(start))
-                                            .atZone(LIBRARY_ZONE)
-                                            .toLocalDateTime();
-                                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-                                    String formatted = startldt.format(formatter);
-                                    System.out.println("预约开始时间:" + formatted);
-                                    logger.info("预约开始时间:" + formatted);
-                                    ;
-
-                                    LocalDateTime endldt = Instant.ofEpochMilli(Long.parseLong(end))
-                                            .atZone(LIBRARY_ZONE)
-                                            .toLocalDateTime();
-                                    DateTimeFormatter formatter2 = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-                                    String formatted2 = endldt.format(formatter2);
-                                    System.out.println("预约结束时间:" + formatted2);
-                                    logger.info("预约结束时间:" + formatted2);
-
-                                    System.out.println("座位问题或未释放!");
-                                    logger.info("座位问题或未释放!");
-                                    if (Integer.parseInt(trycount) > 2) {
-                                        System.out.println("重试超过三次,停止!");
-                                        logger.info("重试超过三次,停止!");
-                                    } else {
-                                        System.out.println("五分钟后再试!");
-                                        logger.info("五分钟后再试!");
-                                        renewwriter.configWriter(true,path, String.valueOf(5), seatid, jarPath, jobid, oldtime, true, Integer.parseInt(trycount), bean.isFallback());
-                                    }
-                                    return SEAT_ERROR;
+                                if (before) {
+                                    renewwriter.configWriter(
+                                            true,
+                                            path,
+                                            String.valueOf(durationMinute),
+                                            seatid,
+                                            jarPath,
+                                            jobid,
+                                            oldtime,
+                                            false,
+                                            Integer.parseInt(trycount),
+                                            bean.isFallback()
+                                    );
+                                } else {
+                                    System.out.println(
+                                            "时间晚于" +
+                                                    bean.getLastRenewHour() +
+                                                    "点" +
+                                                    bean.getLastRenewMinute() +
+                                                    "分 ,停止安排计划续期!"
+                                    );
                                 }
-
                             }
-                            return SEAT_ERROR;
+
+                            return LIBRARY_OR_USER_UNAVAILABLE;
                         }
-
-
                     }
+//                    JsonNode path1 = jsonNode.path("data").path("duration");
+//                    if (!jsonNode.path("data").path("duration").isMissingNode() || path1.isNull()) {
+//                        int durationMinute=5;
+//                        String duration;
+//                        if (!path1.isNull()) {
+//
+//                            System.out.println("预约未结束 还剩" + jsonNode.get("data").get("duration"));
+//                            logger.info("预约未结束 还剩" + jsonNode.get("data").get("duration"));
+//
+//                            duration = jsonNode.get("data").get("duration").asText();
+//                        }else {
+//                            duration="0时5分0秒";
+//                            System.out.println("预约未完全释放,duration存在但为null! 5分钟后自动重试!");
+//                            logger.info("预约未完全释放,duration存在但为null! 5分钟后自动重试!");
+//                        }
+//
+//
+//                        if (bean.isRenew()) {
+//                            try {
+//                                durationMinute = remainingMinutes(duration);
+//
+//                            } catch (IllegalArgumentException e) {
+//                                System.out.println(e.getMessage() + "，不创建续期任务。");
+//                                logger.warn(e.getMessage() + "，不创建续期任务。");
+//                                return SEAT_ERROR;
+//                            }
+//                        }
+//                        before = LocalTime.now(LIBRARY_ZONE)
+//                                .isBefore(LocalTime.of(bean.getLastRenewHour(), bean.getLastRenewMinute()));
+//
+//                        if (before) {
+//                            renewwriter.configWriter(true, path, String.valueOf(durationMinute), seatid, jarPath, jobid, oldtime, false, Integer.parseInt(trycount), bean.isFallback());
+//
+//                        } else {
+//                            System.out.println("时间晚于" + bean.getLastRenewHour() + "点" + bean.getLastRenewMinute() + "分 ,停止安排计划续期!");
+//                            logger.info("时间晚于" + bean.getLastRenewHour() + "点" + bean.getLastRenewMinute() + "分 ,停止安排计划续期!");
+//
+//
+//                        }
+//
+//
+//                        return LIBRARY_OR_USER_UNAVAILABLE;
+//                    } else {
+//                        JsonNode jsonNode1 = jsonNode.get("data").get("devInfo").get(0).get("devName");
+//                        if (jsonNode1 != null) {
+//                            System.out.println("尝试座位: " + jsonNode1.asText());
+//                            logger.info("尝试座位: " + jsonNode1.asText());
+//                            return reservationCheck(bean, seatid, iccookie[0], jobid, oldtime, trycount);
+//
+//                        } else {
+//                            JsonNode jsonNode2 = jsonNode.get("data").get("reserveInfo");
+//                            if (jsonNode1 == null && jsonNode2 != null) {
+//                                JsonNode startTime = jsonNode2.get("resvBeginTime");
+//                                if (startTime != null) {
+//                                    String start = startTime.asText();
+//                                    String end = jsonNode2.get("resvEndOperationTime").asText();
+//                                    LocalDateTime startldt = Instant.ofEpochMilli(Long.parseLong(start))
+//                                            .atZone(LIBRARY_ZONE)
+//                                            .toLocalDateTime();
+//                                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+//                                    String formatted = startldt.format(formatter);
+//                                    System.out.println("预约开始时间:" + formatted);
+//                                    logger.info("预约开始时间:" + formatted);
+//                                    ;
+//
+//                                    LocalDateTime endldt = Instant.ofEpochMilli(Long.parseLong(end))
+//                                            .atZone(LIBRARY_ZONE)
+//                                            .toLocalDateTime();
+//                                    DateTimeFormatter formatter2 = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+//                                    String formatted2 = endldt.format(formatter2);
+//                                    System.out.println("预约结束时间:" + formatted2);
+//                                    logger.info("预约结束时间:" + formatted2);
+//
+//                                    System.out.println("座位问题或未释放!");
+//                                    logger.info("座位问题或未释放!");
+//                                    if (Integer.parseInt(trycount) > 2) {
+//                                        System.out.println("重试超过三次,停止!");
+//                                        logger.info("重试超过三次,停止!");
+//                                    } else {
+//                                        System.out.println("五分钟后再试!");
+//                                        logger.info("五分钟后再试!");
+//                                        renewwriter.configWriter(true, path, String.valueOf(5), seatid, jarPath, jobid, oldtime, true, Integer.parseInt(trycount), bean.isFallback());
+//                                    }
+//                                    return SEAT_ERROR;
+//                                }
+//
+//                            }
+//                            return SEAT_ERROR;
+//                        }
+//
+//
+//                    }
 
 
                 } else {
@@ -402,7 +545,7 @@ public class Login {
                             return SEAT_OK;
                         }
                         if (before) {//本次续期/订座 只有小于设定截止时间才可配置自动续期
-                            renewwriter.configWriter(false,path, format, seatid, jarPath, jobid, oldtime, false, Integer.parseInt(trycount), bean.isFallback());
+                            renewwriter.configWriter(false, path, format, seatid, jarPath, jobid, oldtime, false, Integer.parseInt(trycount), bean.isFallback());
                             return SEAT_OK;
                         } else {
                             System.out.println("时间晚于" + bean.getLastRenewHour() + "点" + bean.getLastRenewMinute() + "分 ,停止安排计划续期!");

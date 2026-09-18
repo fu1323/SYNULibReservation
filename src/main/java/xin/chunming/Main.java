@@ -64,7 +64,7 @@ public class Main {
             logger.info("配置文件不存在 已创建 请填写配置文件！");
             BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(configFile));
             bufferedWriter.write("""
-                    { "unionid":"改成你自己的unionid",
+                    { "unionid":"xxxxxxxx",
                     "seatid":[
                     
                       {"id0": "","comment":"A-123"},
